@@ -13,7 +13,13 @@ import {
   LineChart,
   ReferenceLine,
 } from 'recharts';
-import { PriceRecordWithIndicators } from '../types';
+import {
+  PriceRecordWithIndicators,
+  SignalFilterConfig,
+  DEFAULT_SIGNAL_FILTER_CONFIG,
+} from '../types';
+import { calculateSMA, calculateEMA, calculateRSI } from '../lib/indicators';
+import { SignalFilterPanel } from './SignalFilterPanel';
 import { TrendingUp, TrendingDown, AlertCircle, Calendar } from 'lucide-react';
 
 interface PriceChartProps {
@@ -23,22 +29,32 @@ interface PriceChartProps {
   error?: string | null;
 }
 
+interface ChartRecordWithDynamicIndicators extends PriceRecordWithIndicators {
+  fastMA: number | null;
+  slowMA: number | null;
+  chartRsi: number | null;
+}
+
 interface CustomTooltipProps {
   active?: boolean;
   payload?: Array<{
-    payload: PriceRecordWithIndicators;
+    payload: ChartRecordWithDynamicIndicators;
   }>;
-  showSMA20?: boolean;
-  showSMA50?: boolean;
-  showEMA20?: boolean;
+  showFastMA?: boolean;
+  showSlowMA?: boolean;
+  fastLabel?: string;
+  slowLabel?: string;
+  rsiLabel?: string;
 }
 
 const CustomPriceTooltip: React.FC<CustomTooltipProps> = ({
   active,
   payload,
-  showSMA20 = true,
-  showSMA50 = true,
-  showEMA20 = false,
+  showFastMA = true,
+  showSlowMA = true,
+  fastLabel = 'Fast MA',
+  slowLabel = 'Slow MA',
+  rsiLabel = 'RSI(14)',
 }) => {
   if (!active || !payload || !payload.length) return null;
 
@@ -86,45 +102,34 @@ const CustomPriceTooltip: React.FC<CustomTooltipProps> = ({
         )}
 
         {/* Indicators Section (If enabled or active) */}
-        {(showSMA20 || showSMA50 || showEMA20 || item.rsi14 !== null) && (
+        {(showFastMA || showSlowMA || item.chartRsi !== null) && (
           <div className="pt-1.5 mt-1.5 border-t border-neutral-800 space-y-0.5">
-            {showSMA20 && (
+            {showFastMA && (
               <div className="flex justify-between items-center text-blue-300">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-0.5 bg-blue-400 rounded-xs"></span>
-                  SMA(20):
+                  {fastLabel}:
                 </span>
                 <span className="font-semibold">
-                  {item.sma20 !== null ? `NPR ${item.sma20.toFixed(2)}` : 'insufficient data'}
+                  {item.fastMA !== null ? `NPR ${item.fastMA.toFixed(2)}` : 'insufficient data'}
                 </span>
               </div>
             )}
-            {showSMA50 && (
+            {showSlowMA && (
               <div className="flex justify-between items-center text-amber-300">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-0.5 bg-amber-400 rounded-xs"></span>
-                  SMA(50):
+                  {slowLabel}:
                 </span>
                 <span className="font-semibold">
-                  {item.sma50 !== null ? `NPR ${item.sma50.toFixed(2)}` : 'insufficient data'}
+                  {item.slowMA !== null ? `NPR ${item.slowMA.toFixed(2)}` : 'insufficient data'}
                 </span>
               </div>
             )}
-            {showEMA20 && (
-              <div className="flex justify-between items-center text-purple-300">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-0.5 bg-purple-400 rounded-xs"></span>
-                  EMA(20):
-                </span>
-                <span className="font-semibold">
-                  {item.ema20 !== null ? `NPR ${item.ema20.toFixed(2)}` : 'insufficient data'}
-                </span>
-              </div>
-            )}
-            {item.rsi14 !== null && (
+            {item.chartRsi !== null && (
               <div className="flex justify-between items-center text-indigo-300">
-                <span>RSI(14):</span>
-                <span className="font-semibold">{item.rsi14.toFixed(2)}</span>
+                <span>{rsiLabel}:</span>
+                <span className="font-semibold">{item.chartRsi.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -134,26 +139,37 @@ const CustomPriceTooltip: React.FC<CustomTooltipProps> = ({
   );
 };
 
-const CustomRsiTooltip: React.FC<{
+interface CustomRsiTooltipProps {
   active?: boolean;
-  payload?: Array<{ payload: PriceRecordWithIndicators }>;
-}> = ({ active, payload }) => {
+  payload?: Array<{ payload: ChartRecordWithDynamicIndicators }>;
+  rsiLabel?: string;
+  threshold?: number;
+  direction?: string;
+}
+
+const CustomRsiTooltip: React.FC<CustomRsiTooltipProps> = ({
+  active,
+  payload,
+  rsiLabel = 'RSI(14)',
+  threshold = 30,
+  direction = 'recovery',
+}) => {
   if (!active || !payload || !payload.length) return null;
   const item = payload[0].payload;
-  const rsi = item.rsi14;
+  const rsi = item.chartRsi;
 
   return (
     <div className="bg-neutral-900 text-white p-2.5 rounded-lg shadow-xl text-xs font-mono border border-neutral-700 min-w-[150px]">
       <div className="text-neutral-400 text-[10px] pb-1 border-b border-neutral-800">{item.date}</div>
       <div className="flex items-center justify-between gap-3 mt-1.5">
-        <span className="text-neutral-400">RSI(14):</span>
+        <span className="text-neutral-400">{rsiLabel}:</span>
         <span
           className={`font-bold ${
             rsi === null
               ? 'text-neutral-500'
               : rsi >= 70
               ? 'text-rose-400'
-              : rsi <= 30
+              : rsi <= threshold
               ? 'text-emerald-400'
               : 'text-indigo-300'
           }`}
@@ -163,7 +179,11 @@ const CustomRsiTooltip: React.FC<{
       </div>
       {rsi !== null && (
         <div className="text-[10px] text-neutral-400 mt-0.5">
-          {rsi >= 70 ? 'Overbought (≥70)' : rsi <= 30 ? 'Oversold (≤30)' : 'Neutral'}
+          {rsi >= 70
+            ? 'Overbought (≥70)'
+            : rsi <= threshold
+            ? `Oversold (≤${threshold})`
+            : 'Neutral'}
         </div>
       )}
     </div>
@@ -176,18 +196,48 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   isLoading,
   error,
 }) => {
-  // Toggle states for technical indicator overlays
-  // Default: SMA(20) and SMA(50) ON, EMA(20) OFF
-  const [showSMA20, setShowSMA20] = useState<boolean>(true);
-  const [showSMA50, setShowSMA50] = useState<boolean>(true);
-  const [showEMA20, setShowEMA20] = useState<boolean>(false);
+  // Configurable indicator filter state (defaults to SMA 20/50, RSI 14/30)
+  const [filterConfig, setFilterConfig] = useState<SignalFilterConfig>(DEFAULT_SIGNAL_FILTER_CONFIG);
+
+  // Overlay visibility toggles
+  const [showFastMA, setShowFastMA] = useState<boolean>(true);
+  const [showSlowMA, setShowSlowMA] = useState<boolean>(true);
+  const [showRSI, setShowRSI] = useState<boolean>(true);
+
+  // Dynamically compute indicator series based on user filter parameters
+  const chartData = useMemo<ChartRecordWithDynamicIndicators[]>(() => {
+    if (!data || data.length === 0) return [];
+
+    const fastPeriod = Math.max(1, Math.round(filterConfig.maCross.fastPeriod || 20));
+    const slowPeriod = Math.max(1, Math.round(filterConfig.maCross.slowPeriod || 50));
+    const rsiPeriod = Math.max(2, Math.round(filterConfig.rsiThreshold.period || 14));
+
+    const fast =
+      filterConfig.maCross.fastType === 'EMA'
+        ? calculateEMA(data, fastPeriod)
+        : calculateSMA(data, fastPeriod);
+
+    const slow =
+      filterConfig.maCross.slowType === 'EMA'
+        ? calculateEMA(data, slowPeriod)
+        : calculateSMA(data, slowPeriod);
+
+    const rsi = calculateRSI(data, rsiPeriod);
+
+    return data.map((d, i) => ({
+      ...d,
+      fastMA: fast[i] ?? null,
+      slowMA: slow[i] ?? null,
+      chartRsi: rsi[i] ?? null,
+    }));
+  }, [data, filterConfig]);
 
   // Compute price change and metrics from real data
   const metrics = useMemo(() => {
-    if (!data || data.length === 0) return null;
-    const first = data[0];
-    const latest = data[data.length - 1];
-    const prev = data.length > 1 ? data[data.length - 2] : first;
+    if (!chartData || chartData.length === 0) return null;
+    const first = chartData[0];
+    const latest = chartData[chartData.length - 1];
+    const prev = chartData.length > 1 ? chartData[chartData.length - 2] : first;
 
     const sessionChange = latest.close - prev.close;
     const sessionChangePct = prev.close > 0 ? (sessionChange / prev.close) * 100 : 0;
@@ -198,7 +248,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     let maxPrice = -Infinity;
     let totalVolume = 0;
 
-    for (const d of data) {
+    for (const d of chartData) {
       if (d.low < minPrice && d.low > 0) minPrice = d.low;
       if (d.close < minPrice && d.close > 0) minPrice = d.close;
       if (d.high > maxPrice) maxPrice = d.high;
@@ -206,17 +256,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       totalVolume += (d.volume || 0);
 
       // Account for indicator values in domain so overlay lines don't get clipped
-      if (showSMA20 && d.sma20 !== null) {
-        if (d.sma20 < minPrice) minPrice = d.sma20;
-        if (d.sma20 > maxPrice) maxPrice = d.sma20;
+      if (showFastMA && d.fastMA !== null) {
+        if (d.fastMA < minPrice) minPrice = d.fastMA;
+        if (d.fastMA > maxPrice) maxPrice = d.fastMA;
       }
-      if (showSMA50 && d.sma50 !== null) {
-        if (d.sma50 < minPrice) minPrice = d.sma50;
-        if (d.sma50 > maxPrice) maxPrice = d.sma50;
-      }
-      if (showEMA20 && d.ema20 !== null) {
-        if (d.ema20 < minPrice) minPrice = d.ema20;
-        if (d.ema20 > maxPrice) maxPrice = d.ema20;
+      if (showSlowMA && d.slowMA !== null) {
+        if (d.slowMA < minPrice) minPrice = d.slowMA;
+        if (d.slowMA > maxPrice) maxPrice = d.slowMA;
       }
     }
 
@@ -224,10 +270,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       firstDate: first.date,
       latestDate: latest.date,
       latestClose: latest.close,
-      latestSMA20: latest.sma20,
-      latestSMA50: latest.sma50,
-      latestEMA20: latest.ema20,
-      latestRSI: latest.rsi14,
+      latestFastMA: latest.fastMA,
+      latestSlowMA: latest.slowMA,
+      latestRSI: latest.chartRsi,
       sessionChange,
       sessionChangePct,
       totalChange,
@@ -235,10 +280,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       minPrice: minPrice === Infinity ? 0 : minPrice,
       maxPrice: maxPrice === -Infinity ? 0 : maxPrice,
       totalVolume,
-      sessionCount: data.length,
+      sessionCount: chartData.length,
       isPositive: sessionChange >= 0,
     };
-  }, [data, showSMA20, showSMA50, showEMA20]);
+  }, [chartData, showFastMA, showSlowMA]);
 
   // Handle loading state
   if (isLoading) {
@@ -346,105 +391,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
       </div>
 
-      {/* Indicator Overlay Control Bar */}
-      <div className="px-4 sm:px-5 py-2.5 bg-neutral-50 border-b border-neutral-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4">
-          <span className="font-semibold text-neutral-600 uppercase tracking-wider text-[10px]">
-            Indicator Overlays:
-          </span>
-
-          {/* SMA(20) Toggle */}
-          <label
-            id="toggle-sma20-container"
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono cursor-pointer transition-colors select-none ${
-              showSMA20
-                ? 'bg-blue-50 border-blue-300 text-blue-900 font-semibold'
-                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-100'
-            }`}
-          >
-            <input
-              type="checkbox"
-              id="toggle-sma-20"
-              checked={showSMA20}
-              onChange={(e) => setShowSMA20(e.target.checked)}
-              className="rounded text-blue-600 focus:ring-blue-500 border-neutral-300 w-3.5 h-3.5"
-            />
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1 bg-blue-600 rounded-sm"></span>
-              SMA(20)
-            </span>
-            {metrics?.latestSMA20 !== null && metrics?.latestSMA20 !== undefined && (
-              <span className="text-[10px] text-neutral-500 font-normal">
-                {metrics.latestSMA20.toFixed(1)}
-              </span>
-            )}
-          </label>
-
-          {/* SMA(50) Toggle */}
-          <label
-            id="toggle-sma50-container"
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono cursor-pointer transition-colors select-none ${
-              showSMA50
-                ? 'bg-amber-50 border-amber-300 text-amber-900 font-semibold'
-                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-100'
-            }`}
-          >
-            <input
-              type="checkbox"
-              id="toggle-sma-50"
-              checked={showSMA50}
-              onChange={(e) => setShowSMA50(e.target.checked)}
-              className="rounded text-amber-600 focus:ring-amber-500 border-neutral-300 w-3.5 h-3.5"
-            />
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1 bg-amber-600 rounded-sm"></span>
-              SMA(50)
-            </span>
-            {metrics?.latestSMA50 !== null && metrics?.latestSMA50 !== undefined && (
-              <span className="text-[10px] text-neutral-500 font-normal">
-                {metrics.latestSMA50.toFixed(1)}
-              </span>
-            )}
-          </label>
-
-          {/* EMA(20) Toggle */}
-          <label
-            id="toggle-ema20-container"
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono cursor-pointer transition-colors select-none ${
-              showEMA20
-                ? 'bg-purple-50 border-purple-300 text-purple-900 font-semibold'
-                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-100'
-            }`}
-          >
-            <input
-              type="checkbox"
-              id="toggle-ema-20"
-              checked={showEMA20}
-              onChange={(e) => setShowEMA20(e.target.checked)}
-              className="rounded text-purple-600 focus:ring-purple-500 border-neutral-300 w-3.5 h-3.5"
-            />
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1 bg-purple-600 rounded-sm"></span>
-              EMA(20)
-            </span>
-            {metrics?.latestEMA20 !== null && metrics?.latestEMA20 !== undefined && (
-              <span className="text-[10px] text-neutral-500 font-normal">
-                {metrics.latestEMA20.toFixed(1)}
-              </span>
-            )}
-          </label>
-        </div>
-
-        <div className="hidden sm:block text-[11px] text-neutral-400 font-mono">
-          Pure math • Gaps skipped (no 0 fabrication)
-        </div>
+      {/* Indicator Filter & Overlay Control Panel */}
+      <div className="p-4 sm:p-5 border-b border-neutral-200 bg-neutral-50/60">
+        <SignalFilterPanel
+          config={filterConfig}
+          onChange={setFilterConfig}
+          showOverlayToggles={true}
+          fastVisible={showFastMA}
+          onToggleFastVisible={setShowFastMA}
+          slowVisible={showSlowMA}
+          onToggleSlowVisible={setShowSlowMA}
+          rsiVisible={showRSI}
+          onToggleRsiVisible={setShowRSI}
+          title="Chart Indicator Overlays & Parameters"
+          description="Adjust indicator types, periods, and thresholds to update overlay lines and subcharts in real time."
+        />
       </div>
 
       {/* Main Price & Indicators Chart */}
       <div className="p-3 sm:p-5 space-y-4">
         <div className="h-72 sm:h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={fillColor} stopOpacity={0.15} />
@@ -470,9 +438,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <Tooltip
                 content={
                   <CustomPriceTooltip
-                    showSMA20={showSMA20}
-                    showSMA50={showSMA50}
-                    showEMA20={showEMA20}
+                    showFastMA={showFastMA}
+                    showSlowMA={showSlowMA}
+                    fastLabel={`${filterConfig.maCross.fastType}(${filterConfig.maCross.fastPeriod})`}
+                    slowLabel={`${filterConfig.maCross.slowType}(${filterConfig.maCross.slowPeriod})`}
+                    rsiLabel={`RSI(${filterConfig.rsiThreshold.period})`}
                   />
                 }
               />
@@ -488,12 +458,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 isAnimationActive={false}
               />
 
-              {/* SMA(20) Line - Blue */}
-              {showSMA20 && (
+              {/* Fast MA Line */}
+              {showFastMA && (
                 <Line
                   type="monotone"
-                  dataKey="sma20"
-                  name="SMA(20)"
+                  dataKey="fastMA"
+                  name={`${filterConfig.maCross.fastType}(${filterConfig.maCross.fastPeriod})`}
                   stroke="#2563eb"
                   strokeWidth={1.75}
                   dot={false}
@@ -502,29 +472,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 />
               )}
 
-              {/* SMA(50) Line - Amber */}
-              {showSMA50 && (
+              {/* Slow MA Line */}
+              {showSlowMA && (
                 <Line
                   type="monotone"
-                  dataKey="sma50"
-                  name="SMA(50)"
+                  dataKey="slowMA"
+                  name={`${filterConfig.maCross.slowType}(${filterConfig.maCross.slowPeriod})`}
                   stroke="#d97706"
                   strokeWidth={1.75}
-                  dot={false}
-                  connectNulls={false}
-                  isAnimationActive={false}
-                />
-              )}
-
-              {/* EMA(20) Line - Purple */}
-              {showEMA20 && (
-                <Line
-                  type="monotone"
-                  dataKey="ema20"
-                  name="EMA(20)"
-                  stroke="#9333ea"
-                  strokeWidth={1.75}
-                  strokeDasharray="4 3"
                   dot={false}
                   connectNulls={false}
                   isAnimationActive={false}
@@ -534,75 +489,90 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </ResponsiveContainer>
         </div>
 
-        {/* RSI(14) Subplot (Standard Wilder's Smoothing) */}
-        <div className="pt-3 border-t border-neutral-100">
-          <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-700">RSI (14)</span>
-              <span className="text-neutral-400 font-normal">Wilder&apos;s Smoothing</span>
-              {metrics?.latestRSI !== null && metrics?.latestRSI !== undefined ? (
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                    metrics.latestRSI >= 70
-                      ? 'bg-rose-100 text-rose-800'
-                      : metrics.latestRSI <= 30
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-neutral-100 text-neutral-700'
-                  }`}
-                >
-                  {metrics.latestRSI.toFixed(2)}
-                  {metrics.latestRSI >= 70
-                    ? ' • Overbought (≥70)'
-                    : metrics.latestRSI <= 30
-                    ? ' • Oversold (≤30)'
-                    : ''}
+        {/* RSI Subplot (Adjustable Period & Threshold) */}
+        {showRSI && (
+          <div className="pt-3 border-t border-neutral-100">
+            <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-700">RSI ({filterConfig.rsiThreshold.period})</span>
+                <span className="text-neutral-400 font-normal">Wilder&apos;s Smoothing</span>
+                {metrics?.latestRSI !== null && metrics?.latestRSI !== undefined ? (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      metrics.latestRSI >= 70
+                        ? 'bg-rose-100 text-rose-800'
+                        : metrics.latestRSI <= filterConfig.rsiThreshold.threshold
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-neutral-100 text-neutral-700'
+                    }`}
+                  >
+                    {metrics.latestRSI.toFixed(2)}
+                    {metrics.latestRSI >= 70
+                      ? ' • Overbought (≥70)'
+                      : metrics.latestRSI <= filterConfig.rsiThreshold.threshold
+                      ? ` • Oversold (≤${filterConfig.rsiThreshold.threshold})`
+                      : ''}
+                  </span>
+                ) : (
+                  <span className="font-mono text-neutral-400 text-[10px] italic">
+                    insufficient history (&lt; {filterConfig.rsiThreshold.period + 1} sessions)
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 font-mono text-[10px] text-neutral-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-0.5 bg-rose-500"></span> 70 OB
                 </span>
-              ) : (
-                <span className="font-mono text-neutral-400 text-[10px] italic">
-                  insufficient history (&lt; 15 sessions)
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-0.5 bg-emerald-500"></span> {filterConfig.rsiThreshold.threshold} {filterConfig.rsiThreshold.direction === 'recovery' ? 'OS' : 'Thresh'}
                 </span>
-              )}
+              </div>
             </div>
-            <div className="flex items-center gap-3 font-mono text-[10px] text-neutral-400">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-0.5 bg-rose-500"></span> 70 OB
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-0.5 bg-emerald-500"></span> 30 OS
-              </span>
+            <div className="h-20 sm:h-22 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="date" hide />
+                  <YAxis
+                    domain={[0, 100]}
+                    ticks={[Math.min(30, filterConfig.rsiThreshold.threshold), 70]}
+                    orientation="right"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  />
+                  <ReferenceLine y={70} stroke="#f43f5e" strokeDasharray="3 3" strokeWidth={1} />
+                  <ReferenceLine y={50} stroke="#e2e8f0" strokeDasharray="2 2" strokeWidth={1} />
+                  <ReferenceLine
+                    y={filterConfig.rsiThreshold.threshold}
+                    stroke="#10b981"
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
+                  />
+                  <Tooltip
+                    content={
+                      <CustomRsiTooltip
+                        rsiLabel={`RSI(${filterConfig.rsiThreshold.period})`}
+                        threshold={filterConfig.rsiThreshold.threshold}
+                        direction={filterConfig.rsiThreshold.direction}
+                      />
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="chartRsi"
+                    name={`RSI(${filterConfig.rsiThreshold.period})`}
+                    stroke="#6366f1"
+                    strokeWidth={1.75}
+                    dot={false}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
-          <div className="h-20 sm:h-22 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" hide />
-                <YAxis
-                  domain={[0, 100]}
-                  ticks={[30, 70]}
-                  orientation="right"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
-                />
-                <ReferenceLine y={70} stroke="#f43f5e" strokeDasharray="3 3" strokeWidth={1} />
-                <ReferenceLine y={50} stroke="#e2e8f0" strokeDasharray="2 2" strokeWidth={1} />
-                <ReferenceLine y={30} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1} />
-                <Tooltip content={<CustomRsiTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="rsi14"
-                  name="RSI(14)"
-                  stroke="#6366f1"
-                  strokeWidth={1.75}
-                  dot={false}
-                  connectNulls={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        )}
 
         {/* Synchronized Volume Sub-chart */}
         <div className="pt-3 border-t border-neutral-100">
@@ -614,7 +584,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
           <div className="h-20 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 2, right: 10, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 2, right: 10, left: 0, bottom: 0 }}>
                 <XAxis dataKey="date" hide />
                 <YAxis
                   orientation="right"
@@ -632,9 +602,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <Tooltip
                   content={
                     <CustomPriceTooltip
-                      showSMA20={false}
-                      showSMA50={false}
-                      showEMA20={false}
+                      showFastMA={false}
+                      showSlowMA={false}
                     />
                   }
                 />

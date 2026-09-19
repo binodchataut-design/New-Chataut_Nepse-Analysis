@@ -161,3 +161,42 @@ export interface BacktestResult {
   expectancy: number | null;
   trades: BacktestTrade[];
 }
+
+export type MAType = 'SMA' | 'EMA';
+export type RSIDirection = 'recovery' | 'breakdown';
+export type FilterMode = 'ma_cross' | 'rsi_threshold';
+
+export interface MACrossConfig {
+  fastType: MAType;
+  fastPeriod: number;
+  slowType: MAType;
+  slowPeriod: number;
+}
+
+export interface RSIThresholdConfig {
+  period: number;
+  threshold: number;
+  direction: RSIDirection;
+}
+
+export interface SignalFilterConfig {
+  mode: FilterMode;
+  maCross: MACrossConfig;
+  rsiThreshold: RSIThresholdConfig;
+}
+
+export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
+  mode: 'ma_cross',
+  maCross: {
+    fastType: 'SMA',
+    fastPeriod: 20,
+    slowType: 'SMA',
+    slowPeriod: 50,
+  },
+  rsiThreshold: {
+    period: 14,
+    threshold: 30,
+    direction: 'recovery',
+  },
+};
+

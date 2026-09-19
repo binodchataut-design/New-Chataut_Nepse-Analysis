@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { BacktestResult, PriceRecordWithIndicators } from '../types';
+import {
+  BacktestResult,
+  PriceRecordWithIndicators,
+  SignalFilterConfig,
+  DEFAULT_SIGNAL_FILTER_CONFIG,
+} from '../types';
 import { runBacktest } from '../lib/backtestEngine';
 import {
-  detectTrendCrossSignals,
-  detectRSIRecoverySignals,
+  computeSignalsFromConfig,
+  getSignalSetupDescription,
 } from '../lib/probabilityScoring';
+import { SignalFilterPanel } from './SignalFilterPanel';
 import {
   TrendingUp,
   Activity,
@@ -29,37 +35,51 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
   data,
   isLoading,
 }) => {
+  // Configurable signal filter definition (MA Cross or RSI Threshold)
+  const [filterConfig, setFilterConfig] = useState<SignalFilterConfig>(DEFAULT_SIGNAL_FILTER_CONFIG);
+
   // Configurable trade execution parameters (defaults: Target 3%, Stop 2%, Holding 20 sessions)
   const [targetPct, setTargetPct] = useState<number>(3);
   const [stopPct, setStopPct] = useState<number>(2);
   const [maxHoldingSessions, setMaxHoldingSessions] = useState<number>(20);
 
-  // Compute trade simulations using pure runBacktest engine
-  const { trendResult, rsiResult, trendSignalCount, rsiSignalCount } = useMemo(() => {
+  // Compute trade simulation dynamically from the configured signal filter
+  const { result, signalCount, setupTitle, setupFormula, setupCategory } = useMemo(() => {
     if (!data || data.length === 0) {
       return {
-        trendResult: null,
-        rsiResult: null,
-        trendSignalCount: 0,
-        rsiSignalCount: 0,
+        result: null,
+        signalCount: 0,
+        setupTitle: '',
+        setupFormula: '',
+        setupCategory: '',
       };
     }
 
-    // Reuse existing signal detectors (number[] output)
-    const trendSignals = detectTrendCrossSignals(data);
-    const rsiSignals = detectRSIRecoverySignals(data);
+    // Generic signal detector emits plain number[] indices
+    const { signals } = computeSignalsFromConfig(data, filterConfig);
 
-    // Run independent trade simulations through backtestEngine
-    const trendBt = runBacktest(data, trendSignals, targetPct, stopPct, maxHoldingSessions);
-    const rsiBt = runBacktest(data, rsiSignals, targetPct, stopPct, maxHoldingSessions);
+    // Run trade simulation through unchanged backtestEngine
+    const bt = runBacktest(data, signals, targetPct, stopPct, maxHoldingSessions);
+    const desc = getSignalSetupDescription(filterConfig);
+
+    const category =
+      filterConfig.mode === 'ma_cross'
+        ? 'Trend-Following Setup'
+        : 'Mean-Reversion Setup';
+
+    const formula =
+      filterConfig.mode === 'ma_cross'
+        ? `Entry next open after: ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
+        : `Entry next open after: rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`;
 
     return {
-      trendResult: trendBt,
-      rsiResult: rsiBt,
-      trendSignalCount: trendSignals.length,
-      rsiSignalCount: rsiSignals.length,
+      result: bt,
+      signalCount: signals.length,
+      setupTitle: desc,
+      setupFormula: formula,
+      setupCategory: category,
     };
-  }, [data, targetPct, stopPct, maxHoldingSessions]);
+  }, [data, filterConfig, targetPct, stopPct, maxHoldingSessions]);
 
   const handleResetDefaults = () => {
     setTargetPct(3);
@@ -178,6 +198,14 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
         </div>
       </div>
 
+      {/* Signal Filter Definition Panel */}
+      <SignalFilterPanel
+        config={filterConfig}
+        onChange={setFilterConfig}
+        title="Setup Definition (Signal Source)"
+        description="Choose moving average cross or RSI threshold criteria to feed signal entries into the backtest engine."
+      />
+
       {/* Honest Methodology & Assumptions Notice */}
       <div className="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 space-y-2">
         <div className="flex items-center gap-2 font-bold text-neutral-900">
@@ -201,34 +229,25 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
         </div>
       </div>
 
-      {/* Two Setups Grid */}
+      {/* Single Dynamic Setup Backtest Card */}
       <div className="grid grid-cols-1 gap-6">
-        {/* Setup 1: Trend-Following (SMA20/50 Bullish Cross) */}
         <BacktestSetupCard
-          title="SMA20/50 Bullish Cross"
-          category="Trend-Following Setup"
-          formulaDescription="Entry next open after: sma20[i-1] <= sma50[i-1] AND sma20[i] > sma50[i]"
+          title={setupTitle}
+          category={setupCategory}
+          formulaDescription={setupFormula}
           symbol={symbol}
           targetPct={targetPct}
           stopPct={stopPct}
           maxHoldingSessions={maxHoldingSessions}
-          result={trendResult}
-          totalSignals={trendSignalCount}
-          icon={<TrendingUp className="w-4 h-4 text-blue-600" />}
-        />
-
-        {/* Setup 2: Mean-Reversion (RSI Oversold Recovery) */}
-        <BacktestSetupCard
-          title="RSI Oversold Recovery"
-          category="Mean-Reversion Setup"
-          formulaDescription="Entry next open after: rsi14[i-1] < 30 AND rsi14[i] >= 30"
-          symbol={symbol}
-          targetPct={targetPct}
-          stopPct={stopPct}
-          maxHoldingSessions={maxHoldingSessions}
-          result={rsiResult}
-          totalSignals={rsiSignalCount}
-          icon={<Activity className="w-4 h-4 text-indigo-600" />}
+          result={result}
+          totalSignals={signalCount}
+          icon={
+            filterConfig.mode === 'ma_cross' ? (
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+            ) : (
+              <Activity className="w-4 h-4 text-indigo-600" />
+            )
+          }
         />
       </div>
 
@@ -239,7 +258,7 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
           <span>Simulation operates on fixed single-share execution without position compounding or slip fees.</span>
         </span>
         <span className="font-mono text-[11px] text-neutral-400">
-          Engine Version: Phase 7 Standard
+          Engine Version: Phase 8 Standard
         </span>
       </div>
     </div>

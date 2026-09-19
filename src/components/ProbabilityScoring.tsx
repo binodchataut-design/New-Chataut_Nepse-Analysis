@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { PriceRecordWithIndicators, SetupScoreResult } from '../types';
 import {
-  detectTrendCrossSignals,
-  detectRSIRecoverySignals,
+  PriceRecordWithIndicators,
+  SetupScoreResult,
+  SignalFilterConfig,
+  DEFAULT_SIGNAL_FILTER_CONFIG,
+} from '../types';
+import {
   scoreSetup,
+  computeSignalsFromConfig,
+  getSignalSetupDescription,
 } from '../lib/probabilityScoring';
+import { SignalFilterPanel } from './SignalFilterPanel';
 import {
   TrendingUp,
   RotateCcw,
@@ -28,36 +34,49 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
   data,
   isLoading,
 }) => {
+  // Configurable signal filter definition (MA Cross or RSI Threshold)
+  const [filterConfig, setFilterConfig] = useState<SignalFilterConfig>(DEFAULT_SIGNAL_FILTER_CONFIG);
+
   // Configurable forward window and threshold with defaults 10 sessions / 2%
   const [forwardSessions, setForwardSessions] = useState<number>(10);
   const [thresholdPercent, setThresholdPercent] = useState<number>(2.0);
 
-  // Compute signals and scores over the full chronological dataset
-  const { trendScore, rsiScore, trendSignalCount, rsiSignalCount } = useMemo(() => {
+  // Compute signals from config and score the setup dynamically
+  const { scoreResult, signalCount, setupTitle, setupFormula, setupCategory } = useMemo(() => {
     if (!data || data.length === 0) {
       return {
-        trendScore: null,
-        rsiScore: null,
-        trendSignalCount: 0,
-        rsiSignalCount: 0,
+        scoreResult: null,
+        signalCount: 0,
+        setupTitle: '',
+        setupFormula: '',
+        setupCategory: '',
       };
     }
 
-    const trendSignals = detectTrendCrossSignals(data);
-    const rsiSignals = detectRSIRecoverySignals(data);
+    const { signals } = computeSignalsFromConfig(data, filterConfig);
+    const result = scoreSetup(data, signals, forwardSessions, thresholdPercent);
+    const desc = getSignalSetupDescription(filterConfig);
 
-    const trendResult = scoreSetup(data, trendSignals, forwardSessions, thresholdPercent);
-    const rsiResult = scoreSetup(data, rsiSignals, forwardSessions, thresholdPercent);
+    const category =
+      filterConfig.mode === 'ma_cross'
+        ? 'Trend-Following Setup'
+        : 'Mean-Reversion Setup';
+
+    const formula =
+      filterConfig.mode === 'ma_cross'
+        ? `${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
+        : `rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`;
 
     return {
-      trendScore: trendResult,
-      rsiScore: rsiResult,
-      trendSignalCount: trendSignals.length,
-      rsiSignalCount: rsiSignals.length,
+      scoreResult: result,
+      signalCount: signals.length,
+      setupTitle: desc,
+      setupFormula: formula,
+      setupCategory: category,
     };
-  }, [data, forwardSessions, thresholdPercent]);
+  }, [data, filterConfig, forwardSessions, thresholdPercent]);
 
-  const handleResetDefaults = () => {
+  const handleResetScoringParams = () => {
     setForwardSessions(10);
     setThresholdPercent(2.0);
   };
@@ -96,7 +115,7 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
             </p>
           </div>
 
-          {/* Interactive Parameters Bar */}
+          {/* Interactive Scoring Parameters Bar */}
           <div className="flex flex-wrap items-center gap-3 bg-white p-2.5 rounded-lg border border-neutral-200 shadow-2xs">
             {/* Forward Window Input */}
             <div className="flex items-center gap-2">
@@ -150,7 +169,7 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
             {(forwardSessions !== 10 || thresholdPercent !== 2.0) && (
               <button
                 id="reset-scoring-params-btn"
-                onClick={handleResetDefaults}
+                onClick={handleResetScoringParams}
                 className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-600 hover:text-neutral-900 px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 transition-colors ml-auto"
                 title="Reset to default 10 sessions / 2.0%"
               >
@@ -162,32 +181,34 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
         </div>
       </div>
 
-      {/* Two Setup Scoring Cards */}
-      <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Setup 1: SMA20/50 Bullish Cross */}
-        <SetupCard
-          title="SMA20/50 Bullish Cross"
-          category="Trend-Following Setup"
-          formulaDescription="sma20[i-1] <= sma50[i-1] AND sma20[i] > sma50[i]"
-          symbol={symbol}
-          forwardSessions={forwardSessions}
-          thresholdPercent={thresholdPercent}
-          scoreResult={trendScore}
-          totalSignalsDetected={trendSignalCount}
-          icon={<TrendingUp className="w-4 h-4 text-blue-600" />}
+      {/* Signal Filter Definition Panel */}
+      <div className="p-4 sm:p-5 border-b border-neutral-200 bg-neutral-50/50">
+        <SignalFilterPanel
+          config={filterConfig}
+          onChange={setFilterConfig}
+          title="Setup Definition"
+          description="Configure the indicator type, periods, or thresholds that define the entry trigger for this setup."
         />
+      </div>
 
-        {/* Setup 2: RSI Oversold Recovery */}
+      {/* Single Dynamic Setup Scoring Card */}
+      <div className="p-4 sm:p-5">
         <SetupCard
-          title="RSI Oversold Recovery"
-          category="Mean-Reversion Setup"
-          formulaDescription="rsi14[i-1] < 30 AND rsi14[i] >= 30"
+          title={setupTitle}
+          category={setupCategory}
+          formulaDescription={setupFormula}
           symbol={symbol}
           forwardSessions={forwardSessions}
           thresholdPercent={thresholdPercent}
-          scoreResult={rsiScore}
-          totalSignalsDetected={rsiSignalCount}
-          icon={<Activity className="w-4 h-4 text-indigo-600" />}
+          scoreResult={scoreResult}
+          totalSignalsDetected={signalCount}
+          icon={
+            filterConfig.mode === 'ma_cross' ? (
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+            ) : (
+              <Activity className="w-4 h-4 text-indigo-600" />
+            )
+          }
         />
       </div>
     </div>

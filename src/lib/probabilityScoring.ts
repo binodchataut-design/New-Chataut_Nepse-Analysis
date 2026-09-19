@@ -1,4 +1,11 @@
-import { PriceRecordWithIndicators, SetupOccurrence, SetupScoreResult } from '../types';
+import {
+  PriceRecord,
+  PriceRecordWithIndicators,
+  SetupOccurrence,
+  SetupScoreResult,
+  SignalFilterConfig,
+} from '../types';
+import { calculateSMA, calculateEMA, calculateRSI } from './indicators';
 
 /**
  * Detects "SMA20/50 Bullish Cross" signals:
@@ -54,6 +61,87 @@ export function detectRSIRecoverySignals(data: PriceRecordWithIndicators[]): num
     if (prev.rsi14 !== null && curr.rsi14 !== null) {
       if (prev.rsi14 < 30 && curr.rsi14 >= 30) {
         signals.push(i);
+      }
+    }
+  }
+
+  return signals;
+}
+
+/**
+ * Generic bullish-cross detector:
+ * Fires at index i if fastSeries[i-1] <= slowSeries[i-1] AND fastSeries[i] > slowSeries[i],
+ * where both values on sessions i-1 and i are non-null.
+ * Works on any two precomputed series regardless of what indicator produced them.
+ *
+ * @param fastSeries Faster indicator series (e.g. SMA20 or EMA10)
+ * @param slowSeries Slower indicator series (e.g. SMA50 or EMA30)
+ * @returns Array of integer indices where the bullish cross fired.
+ */
+export function detectMACrossSignals(
+  fastSeries: (number | null)[],
+  slowSeries: (number | null)[]
+): number[] {
+  if (!fastSeries || !slowSeries) return [];
+  const len = Math.min(fastSeries.length, slowSeries.length);
+  if (len < 2) return [];
+
+  const signals: number[] = [];
+
+  for (let i = 1; i < len; i++) {
+    const prevFast = fastSeries[i - 1];
+    const prevSlow = slowSeries[i - 1];
+    const currFast = fastSeries[i];
+    const currSlow = slowSeries[i];
+
+    if (
+      prevFast !== null &&
+      prevSlow !== null &&
+      currFast !== null &&
+      currSlow !== null
+    ) {
+      if (prevFast <= prevSlow && currFast > currSlow) {
+        signals.push(i);
+      }
+    }
+  }
+
+  return signals;
+}
+
+/**
+ * Generic RSI threshold crossing detector:
+ * - 'recovery': fires when rsi crosses from below threshold to >= threshold (rsi[i-1] < threshold && rsi[i] >= threshold).
+ * - 'breakdown': fires when rsi crosses from above threshold down to <= threshold (rsi[i-1] > threshold && rsi[i] <= threshold).
+ * Both values must be non-null.
+ *
+ * @param rsiSeries Precomputed RSI series
+ * @param threshold Numerical threshold (e.g. 30 for oversold recovery, 70 for overbought breakdown)
+ * @param direction 'recovery' | 'breakdown'
+ * @returns Array of integer indices where the threshold crossing fired.
+ */
+export function detectRSIThresholdSignals(
+  rsiSeries: (number | null)[],
+  threshold: number,
+  direction: 'recovery' | 'breakdown'
+): number[] {
+  if (!rsiSeries || rsiSeries.length < 2) return [];
+
+  const signals: number[] = [];
+
+  for (let i = 1; i < rsiSeries.length; i++) {
+    const prev = rsiSeries[i - 1];
+    const curr = rsiSeries[i];
+
+    if (prev !== null && curr !== null) {
+      if (direction === 'recovery') {
+        if (prev < threshold && curr >= threshold) {
+          signals.push(i);
+        }
+      } else if (direction === 'breakdown') {
+        if (prev > threshold && curr <= threshold) {
+          signals.push(i);
+        }
       }
     }
   }
@@ -161,3 +249,64 @@ export function scoreSetup(
     occurrences,
   };
 }
+
+/**
+ * Computes signal indices and indicator series dynamically from a user-configured filter.
+ */
+export function computeSignalsFromConfig(
+  data: PriceRecord[],
+  config: SignalFilterConfig
+): {
+  signals: number[];
+  fastSeries?: (number | null)[];
+  slowSeries?: (number | null)[];
+  rsiSeries?: (number | null)[];
+} {
+  if (!data || data.length < 2) {
+    return { signals: [] };
+  }
+
+  if (config.mode === 'ma_cross') {
+    const fastPeriod = Math.max(1, Math.round(config.maCross.fastPeriod || 20));
+    const slowPeriod = Math.max(1, Math.round(config.maCross.slowPeriod || 50));
+
+    const fastSeries =
+      config.maCross.fastType === 'EMA'
+        ? calculateEMA(data, fastPeriod)
+        : calculateSMA(data, fastPeriod);
+
+    const slowSeries =
+      config.maCross.slowType === 'EMA'
+        ? calculateEMA(data, slowPeriod)
+        : calculateSMA(data, slowPeriod);
+
+    const signals = detectMACrossSignals(fastSeries, slowSeries);
+    return { signals, fastSeries, slowSeries };
+  } else {
+    const period = Math.max(2, Math.round(config.rsiThreshold.period || 14));
+    const threshold = Number.isFinite(config.rsiThreshold.threshold)
+      ? config.rsiThreshold.threshold
+      : 30;
+    const direction = config.rsiThreshold.direction || 'recovery';
+
+    const rsiSeries = calculateRSI(data, period);
+    const signals = detectRSIThresholdSignals(rsiSeries, threshold, direction);
+    return { signals, rsiSeries };
+  }
+}
+
+/**
+ * Returns a clean, human-readable description of a configured setup.
+ */
+export function getSignalSetupDescription(config: SignalFilterConfig): string {
+  if (config.mode === 'ma_cross') {
+    return `${config.maCross.fastType}(${config.maCross.fastPeriod}) / ${config.maCross.slowType}(${config.maCross.slowPeriod}) Bullish Cross`;
+  } else {
+    const dirLabel =
+      config.rsiThreshold.direction === 'recovery'
+        ? `Recovery (crosses ≥ ${config.rsiThreshold.threshold})`
+        : `Breakdown (crosses ≤ ${config.rsiThreshold.threshold})`;
+    return `RSI(${config.rsiThreshold.period}) ${dirLabel}`;
+  }
+}
+
