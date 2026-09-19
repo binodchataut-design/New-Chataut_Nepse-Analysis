@@ -60,3 +60,48 @@ export interface SetupScoreResult {
   avgForwardReturn: number | null;
   occurrences: SetupOccurrence[];
 }
+
+export type TabType = 'dashboard' | 'chart' | 'lab' | 'backtest' | 'data';
+
+export interface MarketIndexStatus {
+  latestDate: string;
+  latestClose: number;
+  previousDate: string | null;
+  previousClose: number | null;
+  pointsChange: number | null;
+  percentChangeStored: number | null;
+  percentChangeCalculated: number | null;
+  rawRows: Array<{
+    date: string;
+    close: number;
+    change_percent: number | null;
+    turnover: number | null;
+  }>;
+}
+
+export interface MarketVolumeTurnover {
+  date: string;
+  totalVolume: number;
+  totalTurnover: number | null;
+  turnoverColumnExists: boolean;
+  symbolCount: number;
+}
+
+export interface SectorStat {
+  sector: string;
+  advancers: number;
+  decliners: number;
+  unchanged: number;
+  total: number;
+}
+
+export interface MarketOverviewData {
+  indexStatus: MarketIndexStatus | null;
+  indexError?: string;
+  volumeTurnover: MarketVolumeTurnover | null;
+  volumeError?: string;
+  sectorStats: SectorStat[];
+  sectorError?: string;
+  sectorDate: string | null;
+  asOfTimestamp: string;
+}

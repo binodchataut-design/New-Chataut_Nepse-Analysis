@@ -1,4 +1,5 @@
 import { getSupabaseClient, supabaseUrl, supabaseAnonKey } from './supabaseClient';
+import { MarketOverviewData, SectorStat } from '../types';
 
 export interface Company {
   symbol: string;
@@ -316,4 +317,168 @@ export async function getPriceHistory(
 
 export function getCachedIntrospection(): IntrospectionReport | null {
   return cachedIntrospection;
+}
+
+/**
+ * Reads market-wide overview stats:
+ * 1. NEPSE Index status from `market_index` (latest row, previous row, point & pct change)
+ * 2. Total market volume & turnover from `daily_prices` for the latest available date
+ * 3. Sector breakdown (advancers, decliners, unchanged) based on `companies.sector` and `daily_prices.per_change`
+ */
+export async function getMarketOverview(): Promise<MarketOverviewData> {
+  const client = getSupabaseClient();
+  const result: MarketOverviewData = {
+    indexStatus: null,
+    volumeTurnover: null,
+    sectorStats: [],
+    sectorDate: null,
+    asOfTimestamp: new Date().toISOString(),
+  };
+
+  // 1. NEPSE Index Status from `market_index`
+  try {
+    const { data: idxRows, error: idxErr } = await client
+      .from('market_index')
+      .select('date, close, change_percent, turnover')
+      .order('date', { ascending: false })
+      .limit(2);
+
+    if (idxErr) {
+      result.indexError = `Error querying market_index: ${idxErr.message}`;
+    } else if (idxRows && idxRows.length > 0) {
+      const latest = idxRows[0];
+      const prev = idxRows.length > 1 ? idxRows[1] : null;
+      const latestClose = Number(latest.close);
+      const prevClose = prev ? Number(prev.close) : null;
+      const pointsChange = prevClose !== null ? Number((latestClose - prevClose).toFixed(2)) : null;
+      const calculatedPct =
+        prevClose !== null && prevClose !== 0
+          ? Number((((latestClose - prevClose) / prevClose) * 100).toFixed(2))
+          : null;
+      const storedPct =
+        latest.change_percent !== null && latest.change_percent !== undefined
+          ? Number(latest.change_percent)
+          : null;
+
+      result.indexStatus = {
+        latestDate: String(latest.date),
+        latestClose,
+        previousDate: prev ? String(prev.date) : null,
+        previousClose: prevClose,
+        pointsChange,
+        percentChangeStored: storedPct,
+        percentChangeCalculated: calculatedPct,
+        rawRows: idxRows.map((r) => ({
+          date: String(r.date),
+          close: Number(r.close),
+          change_percent: r.change_percent !== null ? Number(r.change_percent) : null,
+          turnover: r.turnover !== null ? Number(r.turnover) : null,
+        })),
+      };
+    } else {
+      result.indexError = 'No records found in market_index table.';
+    }
+  } catch (err: unknown) {
+    result.indexError = err instanceof Error ? err.message : String(err);
+  }
+
+  // 2 & 3. Max date in daily_prices, Volume/Turnover, and Sector Breakdown
+  let latestPriceDate: string | null = null;
+  try {
+    const { data: maxDateRows, error: maxDateErr } = await client
+      .from('daily_prices')
+      .select('date')
+      .order('date', { ascending: false })
+      .limit(1);
+
+    if (maxDateErr) {
+      result.volumeError = `Failed to find latest date in daily_prices: ${maxDateErr.message}`;
+      result.sectorError = `Failed to find latest date in daily_prices: ${maxDateErr.message}`;
+    } else if (maxDateRows && maxDateRows.length > 0) {
+      latestPriceDate = String(maxDateRows[0].date);
+      result.sectorDate = latestPriceDate;
+    } else {
+      result.volumeError = 'No records found in daily_prices table.';
+      result.sectorError = 'No records found in daily_prices table.';
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    result.volumeError = msg;
+    result.sectorError = msg;
+  }
+
+  if (latestPriceDate) {
+    // Fetch company sector mapping
+    const companySectorMap = new Map<string, string>();
+    try {
+      const companies = await getCompanies();
+      companies.forEach((c) => {
+        companySectorMap.set(c.symbol, c.sector?.trim() || 'Others');
+      });
+    } catch (cErr) {
+      console.warn('Could not fetch companies for sector breakdown:', cErr);
+    }
+
+    try {
+      // Fetch all rows for the most recent date
+      const { data: dayRows, error: dayErr } = await client
+        .from('daily_prices')
+        .select('symbol, close, volume, per_change')
+        .eq('date', latestPriceDate);
+
+      if (dayErr) {
+        result.volumeError = `Error fetching prices for date ${latestPriceDate}: ${dayErr.message}`;
+        result.sectorError = `Error fetching prices for date ${latestPriceDate}: ${dayErr.message}`;
+      } else if (dayRows && dayRows.length > 0) {
+        let totalVol = 0;
+        const sectorMap = new Map<string, SectorStat>();
+
+        dayRows.forEach((r) => {
+          totalVol += Number(r.volume || 0);
+
+          const sec = companySectorMap.get(r.symbol) || 'Others';
+          if (!sectorMap.has(sec)) {
+            sectorMap.set(sec, {
+              sector: sec,
+              advancers: 0,
+              decliners: 0,
+              unchanged: 0,
+              total: 0,
+            });
+          }
+          const stat = sectorMap.get(sec)!;
+          stat.total++;
+
+          const change = Number(r.per_change ?? 0);
+          if (change > 0) {
+            stat.advancers++;
+          } else if (change < 0) {
+            stat.decliners++;
+          } else {
+            stat.unchanged++;
+          }
+        });
+
+        // daily_prices table has no 'turnover' column
+        result.volumeTurnover = {
+          date: latestPriceDate,
+          totalVolume: totalVol,
+          totalTurnover: null,
+          turnoverColumnExists: false,
+          symbolCount: dayRows.length,
+        };
+
+        result.sectorStats = Array.from(sectorMap.values()).sort((a, b) => b.total - a.total);
+      } else {
+        result.volumeError = `Zero records found in daily_prices for ${latestPriceDate}.`;
+        result.sectorError = `Zero records found in daily_prices for ${latestPriceDate}.`;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result.volumeError = msg;
+      result.sectorError = msg;
+    }
+  }
+
+  return result;
 }

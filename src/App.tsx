@@ -4,6 +4,7 @@ import {
   getCompanies,
   getPriceHistory,
   introspectSchema,
+  getMarketOverview,
 } from './lib/dataService';
 import {
   calculateSMA,
@@ -17,17 +18,22 @@ import {
   PriceRecordWithIndicators,
   IntrospectionReport,
   TimeRange,
+  TabType,
+  MarketOverviewData,
 } from './types';
+import { Dashboard } from './components/Dashboard';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
 import { ProbabilityScoring } from './components/ProbabilityScoring';
+import { BacktestPlaceholder } from './components/BacktestPlaceholder';
 import { SchemaInspector } from './components/SchemaInspector';
 import {
-  Activity,
-  Calendar,
+  LayoutDashboard,
+  TrendingUp,
+  Layers,
+  Sliders,
   Database,
   AlertTriangle,
-  CheckCircle2,
   RefreshCw,
   Clock,
 } from 'lucide-react';
@@ -35,11 +41,15 @@ import {
 export default function App() {
   const configStatus = useMemo(() => getSupabaseConfigStatus(), []);
 
+  // Plain Tab Navigation State (default is 'dashboard')
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+
   // Application State
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string>('');
   const [priceHistory, setPriceHistory] = useState<PriceRecord[]>([]);
   const [schemaReport, setSchemaReport] = useState<IntrospectionReport | null>(null);
+  const [marketOverview, setMarketOverview] = useState<MarketOverviewData | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
 
   // Loading & Error States
@@ -50,6 +60,7 @@ export default function App() {
   const [pricesError, setPricesError] = useState<string | null>(null);
 
   const [isInspectingSchema, setIsInspectingSchema] = useState<boolean>(false);
+  const [isLoadingMarketOverview, setIsLoadingMarketOverview] = useState<boolean>(false);
 
   // 1. Initial Load: Schema introspection & Companies list
   const initializeData = useCallback(async () => {
@@ -84,13 +95,28 @@ export default function App() {
     }
   }, [configStatus.isConfigured]);
 
+  // 2. Fetch Market Overview (cached in state, not re-fetched on tab switches)
+  const loadMarketOverviewData = useCallback(async () => {
+    if (!configStatus.isConfigured) return;
+    setIsLoadingMarketOverview(true);
+    try {
+      const overview = await getMarketOverview();
+      setMarketOverview(overview);
+    } catch (err) {
+      console.error('Failed to load market overview:', err);
+    } finally {
+      setIsLoadingMarketOverview(false);
+    }
+  }, [configStatus.isConfigured]);
+
   useEffect(() => {
     if (configStatus.isConfigured) {
       initializeData();
+      loadMarketOverviewData();
     }
-  }, [configStatus.isConfigured, initializeData]);
+  }, [configStatus.isConfigured, initializeData, loadMarketOverviewData]);
 
-  // 2. Load Price History whenever selectedSymbol changes
+  // 3. Load Price History whenever selectedSymbol changes
   const loadPrices = useCallback(async (symbol: string) => {
     if (!symbol || !configStatus.isConfigured) {
       setPriceHistory([]);
@@ -117,7 +143,7 @@ export default function App() {
     }
   }, [selectedSymbol, loadPrices]);
 
-  // 3. Calculate technical indicators on the full chronological series first
+  // 4. Calculate technical indicators on the full chronological series first
   const priceHistoryWithIndicators = useMemo<PriceRecordWithIndicators[]>(() => {
     if (!priceHistory || priceHistory.length === 0) return [];
 
@@ -137,7 +163,7 @@ export default function App() {
     }));
   }, [priceHistory]);
 
-  // 4. Filter Price History by selected Time Range while preserving pre-computed indicators
+  // 5. Filter Price History by selected Time Range while preserving pre-computed indicators
   const filteredPrices = useMemo<PriceRecordWithIndicators[]>(() => {
     if (!priceHistoryWithIndicators.length || timeRange === 'ALL') {
       return priceHistoryWithIndicators;
@@ -165,8 +191,6 @@ export default function App() {
     const firstItem = priceHistoryWithIndicators[0];
     const latestItem = priceHistoryWithIndicators[priceHistoryWithIndicators.length - 1];
 
-    // Relative Volume for latest session:
-    // If under 20 sessions of history exist, show "insufficient history" rather than a wrong number
     let relativeVolumeText = 'insufficient history';
     const hasEnoughRvolHistory = priceHistoryWithIndicators.length >= 20 && latestItem.relativeVolume !== null;
     if (hasEnoughRvolHistory) {
@@ -183,6 +207,14 @@ export default function App() {
       hasEnoughRvolHistory,
     };
   }, [priceHistoryWithIndicators, filteredPrices]);
+
+  const navTabs = [
+    { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'chart' as TabType, label: 'Chart', icon: TrendingUp },
+    { id: 'lab' as TabType, label: 'Probability Lab', icon: Layers },
+    { id: 'backtest' as TabType, label: 'Backtest', icon: Sliders },
+    { id: 'data' as TabType, label: 'Data Status', icon: Database },
+  ];
 
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans antialiased">
@@ -267,126 +299,197 @@ export default function App() {
         {/* Live App Controls (When Configured) */}
         {configStatus.isConfigured && (
           <>
-            {/* Top Toolbar: Symbol Picker & Range Filter */}
-            <section className="bg-white p-4 sm:p-5 border border-neutral-200 rounded-xl shadow-xs flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <SymbolPicker
-                companies={companies}
-                selectedSymbol={selectedSymbol}
-                onSelectSymbol={setSelectedSymbol}
-                isLoading={isLoadingCompanies}
-                error={companiesError}
-              />
+            {/* Plain 5-Tab Navigation Bar */}
+            <nav id="app-tabs-nav" className="flex items-center gap-1.5 border-b border-neutral-200 pb-0 overflow-x-auto">
+              {navTabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`tab-${tab.id}`}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg transition-all border-b-2 whitespace-nowrap ${
+                      isActive
+                        ? 'border-neutral-900 text-neutral-900 bg-white shadow-2xs'
+                        : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/70'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
 
-              {/* Time Range Selector */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Time Horizon
-                </span>
-                <div className="inline-flex rounded-lg border border-neutral-300 p-0.5 bg-neutral-100 text-xs font-mono font-medium">
-                  {(['1M', '3M', '6M', '1Y', 'ALL'] as TimeRange[]).map((r) => {
-                    const isSelected = timeRange === r;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setTimeRange(r)}
-                        className={`px-3 py-1.5 rounded-md transition-colors ${
-                          isSelected
-                            ? 'bg-white text-neutral-900 font-bold shadow-xs'
-                            : 'text-neutral-600 hover:text-neutral-900'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    );
-                  })}
+            {/* TAB 1: DASHBOARD (Market Overview) */}
+            {activeTab === 'dashboard' && (
+              <section id="dashboard-tab-content">
+                <Dashboard
+                  data={marketOverview}
+                  isLoading={isLoadingMarketOverview}
+                  onRefresh={loadMarketOverviewData}
+                  onNavigateToChart={() => setActiveTab('chart')}
+                />
+              </section>
+            )}
+
+            {/* TAB 2: CHART (Symbol Picker, Chart, Indicators, Status Line) */}
+            {activeTab === 'chart' && (
+              <section id="chart-tab-content" className="space-y-5">
+                {/* Top Toolbar: Symbol Picker & Range Filter */}
+                <div className="bg-white p-4 sm:p-5 border border-neutral-200 rounded-xl shadow-xs flex flex-col md:flex-row md:items-end justify-between gap-4">
+                  <SymbolPicker
+                    companies={companies}
+                    selectedSymbol={selectedSymbol}
+                    onSelectSymbol={setSelectedSymbol}
+                    isLoading={isLoadingCompanies}
+                    error={companiesError}
+                  />
+
+                  {/* Time Range Selector */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      Time Horizon
+                    </span>
+                    <div className="inline-flex rounded-lg border border-neutral-300 p-0.5 bg-neutral-100 text-xs font-mono font-medium">
+                      {(['1M', '3M', '6M', '1Y', 'ALL'] as TimeRange[]).map((r) => {
+                        const isSelected = timeRange === r;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setTimeRange(r)}
+                            className={`px-3 py-1.5 rounded-md transition-colors ${
+                              isSelected
+                                ? 'bg-white text-neutral-900 font-bold shadow-xs'
+                                : 'text-neutral-600 hover:text-neutral-900'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </section>
 
-            {/* Status Line (Mandatory Specification) */}
-            <section
-              id="data-status-line"
-              className="px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs"
-            >
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-neutral-500 shrink-0" />
-                {statusDetails ? (
-                  <div className="text-neutral-700 flex flex-wrap items-center gap-y-1">
-                    <span className="text-neutral-500">Most recent data for </span>
-                    <span className="font-mono font-bold text-neutral-900">{selectedSymbol}</span>:
-                    <span className="font-mono font-semibold text-neutral-900 ml-1.5 px-2 py-0.5 rounded-sm bg-neutral-100">
-                      {statusDetails.latestDate}
-                    </span>
-                    <span className="text-neutral-400 mx-1.5">|</span>
-                    <span className="text-neutral-600">
-                      {statusDetails.totalSessions} total trading sessions recorded ({statusDetails.firstDate} to {statusDetails.latestDate})
-                    </span>
-                    <span className="text-neutral-400 mx-1.5">|</span>
-                    <span className="text-neutral-700">
-                      Relative Volume:{' '}
-                      <span
-                        className={`font-mono font-semibold px-1.5 py-0.5 rounded-sm ${
-                          statusDetails.hasEnoughRvolHistory
-                            ? 'bg-neutral-100 text-neutral-900'
-                            : 'bg-neutral-100 text-neutral-500 italic'
-                        }`}
-                      >
-                        {statusDetails.relativeVolumeText}
-                      </span>
+                {/* Status Line (Mandatory Specification) */}
+                <div
+                  id="data-status-line"
+                  className="px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-neutral-500 shrink-0" />
+                    {statusDetails ? (
+                      <div className="text-neutral-700 flex flex-wrap items-center gap-y-1">
+                        <span className="text-neutral-500">Most recent data for </span>
+                        <span className="font-mono font-bold text-neutral-900">{selectedSymbol}</span>:
+                        <span className="font-mono font-semibold text-neutral-900 ml-1.5 px-2 py-0.5 rounded-sm bg-neutral-100">
+                          {statusDetails.latestDate}
+                        </span>
+                        <span className="text-neutral-400 mx-1.5">|</span>
+                        <span className="text-neutral-600">
+                          {statusDetails.totalSessions} total trading sessions recorded ({statusDetails.firstDate} to {statusDetails.latestDate})
+                        </span>
+                        <span className="text-neutral-400 mx-1.5">|</span>
+                        <span className="text-neutral-700">
+                          Relative Volume:{' '}
+                          <span
+                            className={`font-mono font-semibold px-1.5 py-0.5 rounded-sm ${
+                              statusDetails.hasEnoughRvolHistory
+                                ? 'bg-neutral-100 text-neutral-900'
+                                : 'bg-neutral-100 text-neutral-500 italic'
+                            }`}
+                          >
+                            {statusDetails.relativeVolumeText}
+                          </span>
+                        </span>
+                      </div>
+                    ) : isLoadingPrices ? (
+                      <span className="text-neutral-500 italic">Querying `daily_prices` table...</span>
+                    ) : pricesError ? (
+                      <span className="text-rose-600 font-medium">Data fetch failed for {selectedSymbol}</span>
+                    ) : (
+                      <span className="text-neutral-500 italic">No price records available for {selectedSymbol || 'selected symbol'}</span>
+                    )}
+                  </div>
+
+                  {/* Refresh Price Button */}
+                  {selectedSymbol && (
+                    <button
+                      type="button"
+                      id="refresh-prices-button"
+                      onClick={() => loadPrices(selectedSymbol)}
+                      disabled={isLoadingPrices}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-neutral-700 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-md font-medium transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoadingPrices ? 'animate-spin' : ''}`} />
+                      <span>Refresh Data</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Price Chart */}
+                <div id="chart-section">
+                  <PriceChart
+                    symbol={selectedSymbol}
+                    data={filteredPrices}
+                    isLoading={isLoadingPrices}
+                    error={pricesError}
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* TAB 3: PROBABILITY LAB (Setup Cards & Occurrence Tables) */}
+            {activeTab === 'lab' && (
+              <section id="lab-tab-content" className="space-y-5">
+                {/* Symbol Selector Bar for Lab */}
+                <div className="bg-white p-4 sm:p-5 border border-neutral-200 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <SymbolPicker
+                    companies={companies}
+                    selectedSymbol={selectedSymbol}
+                    onSelectSymbol={setSelectedSymbol}
+                    isLoading={isLoadingCompanies}
+                    error={companiesError}
+                  />
+
+                  <div className="text-xs text-neutral-500 flex items-center gap-2">
+                    <span className="font-mono bg-neutral-100 px-2.5 py-1 rounded text-neutral-700 font-medium">
+                      {priceHistoryWithIndicators.length} sessions loaded for {selectedSymbol}
                     </span>
                   </div>
-                ) : isLoadingPrices ? (
-                  <span className="text-neutral-500 italic">Querying `daily_prices` table...</span>
-                ) : pricesError ? (
-                  <span className="text-rose-600 font-medium">Data fetch failed for {selectedSymbol}</span>
-                ) : (
-                  <span className="text-neutral-500 italic">No price records available for {selectedSymbol || 'selected symbol'}</span>
-                )}
-              </div>
+                </div>
 
-              {/* Refresh Price Button */}
-              {selectedSymbol && (
-                <button
-                  type="button"
-                  id="refresh-prices-button"
-                  onClick={() => loadPrices(selectedSymbol)}
-                  disabled={isLoadingPrices}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-neutral-700 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-md font-medium transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isLoadingPrices ? 'animate-spin' : ''}`} />
-                  <span>Refresh Data</span>
-                </button>
-              )}
-            </section>
+                <div id="probability-scoring-section">
+                  <ProbabilityScoring
+                    symbol={selectedSymbol}
+                    data={priceHistoryWithIndicators}
+                    isLoading={isLoadingPrices}
+                  />
+                </div>
+              </section>
+            )}
 
-            {/* Price Chart */}
-            <section id="chart-section">
-              <PriceChart
-                symbol={selectedSymbol}
-                data={filteredPrices}
-                isLoading={isLoadingPrices}
-                error={pricesError}
-              />
-            </section>
+            {/* TAB 4: BACKTEST (Honest Placeholder for Phase 4) */}
+            {activeTab === 'backtest' && (
+              <section id="backtest-tab-content">
+                <BacktestPlaceholder />
+              </section>
+            )}
 
-            {/* Probability Scoring Section */}
-            <section id="probability-scoring-section">
-              <ProbabilityScoring
-                symbol={selectedSymbol}
-                data={priceHistoryWithIndicators}
-                isLoading={isLoadingPrices}
-              />
-            </section>
-
-            {/* Live Schema Inspector (Inspects daily_prices, companies, market_index) */}
-            <section id="schema-inspection-section">
-              <SchemaInspector
-                report={schemaReport}
-                isLoading={isInspectingSchema}
-                onRefresh={initializeData}
-              />
-            </section>
+            {/* TAB 5: DATA STATUS (Live Schema Inspector) */}
+            {activeTab === 'data' && (
+              <section id="data-tab-content">
+                <SchemaInspector
+                  report={schemaReport}
+                  isLoading={isInspectingSchema}
+                  onRefresh={initializeData}
+                />
+              </section>
+            )}
           </>
         )}
       </main>
