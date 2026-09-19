@@ -135,3 +135,29 @@ export interface MarketScanResult {
   durationMs: number;
   scannedAt: string;
 }
+
+export type ExitReason = 'target' | 'stop' | 'expired';
+
+export interface BacktestTrade {
+  signalDate: string;
+  entryDate: string;
+  entryPrice: number;
+  exitDate: string;
+  exitPrice: number;
+  exitReason: ExitReason;
+  returnPct: number;
+  holdingSessions: number;
+}
+
+export interface BacktestResult {
+  totalTrades: number;
+  excludedTrades: number;
+  wins: number;
+  losses: number;
+  expired: number;
+  winRate: number | null;
+  avgWinReturn: number | null;
+  avgLossReturn: number | null;
+  expectancy: number | null;
+  trades: BacktestTrade[];
+}

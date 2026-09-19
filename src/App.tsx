@@ -28,7 +28,7 @@ import { Dashboard } from './components/Dashboard';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
 import { ProbabilityScoring } from './components/ProbabilityScoring';
-import { BacktestPlaceholder } from './components/BacktestPlaceholder';
+import { BacktestLab } from './components/BacktestLab';
 import { SchemaInspector } from './components/SchemaInspector';
 import {
   LayoutDashboard,
@@ -518,10 +518,33 @@ export default function App() {
               </section>
             )}
 
-            {/* TAB 4: BACKTEST (Honest Placeholder for Phase 4) */}
+            {/* TAB 4: BACKTEST (Trade Simulation Lab) */}
             {activeTab === 'backtest' && (
-              <section id="backtest-tab-content">
-                <BacktestPlaceholder />
+              <section id="backtest-tab-content" className="space-y-5">
+                {/* Symbol Selector Bar for Backtest */}
+                <div className="bg-white p-4 sm:p-5 border border-neutral-200 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <SymbolPicker
+                    companies={companies}
+                    selectedSymbol={selectedSymbol}
+                    onSelectSymbol={setSelectedSymbol}
+                    isLoading={isLoadingCompanies}
+                    error={companiesError}
+                  />
+
+                  <div className="text-xs text-neutral-500 flex items-center gap-2">
+                    <span className="font-mono bg-neutral-100 px-2.5 py-1 rounded text-neutral-700 font-medium">
+                      {priceHistoryWithIndicators.length} sessions loaded for {selectedSymbol}
+                    </span>
+                  </div>
+                </div>
+
+                <div id="backtest-simulation-container">
+                  <BacktestLab
+                    symbol={selectedSymbol}
+                    data={priceHistoryWithIndicators}
+                    isLoading={isLoadingPrices}
+                  />
+                </div>
               </section>
             )}
 
