@@ -40,3 +40,23 @@ export interface PriceRecordWithIndicators extends PriceRecord {
   rsi14: number | null;
   relativeVolume: number | null;
 }
+
+export interface SetupOccurrence {
+  signalDate: string;
+  signalClose: number;
+  outcomeDate: string | null;
+  outcomeClose: number | null;
+  forwardReturn: number | null;
+  worked: boolean;
+  isExcluded?: boolean;
+  sessionsAvailable?: number;
+}
+
+export interface SetupScoreResult {
+  totalOccurrences: number;
+  excludedOccurrences: number;
+  successCount: number;
+  hitRate: number | null;
+  avgForwardReturn: number | null;
+  occurrences: SetupOccurrence[];
+}

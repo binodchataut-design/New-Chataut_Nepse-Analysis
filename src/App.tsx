@@ -20,6 +20,7 @@ import {
 } from './types';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
+import { ProbabilityScoring } from './components/ProbabilityScoring';
 import { SchemaInspector } from './components/SchemaInspector';
 import {
   Activity,
@@ -366,6 +367,15 @@ export default function App() {
                 data={filteredPrices}
                 isLoading={isLoadingPrices}
                 error={pricesError}
+              />
+            </section>
+
+            {/* Probability Scoring Section */}
+            <section id="probability-scoring-section">
+              <ProbabilityScoring
+                symbol={selectedSymbol}
+                data={priceHistoryWithIndicators}
+                isLoading={isLoadingPrices}
               />
             </section>
 
