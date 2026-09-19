@@ -5,7 +5,19 @@ import {
   getPriceHistory,
   introspectSchema,
 } from './lib/dataService';
-import { Company, PriceRecord, IntrospectionReport, TimeRange } from './types';
+import {
+  calculateSMA,
+  calculateEMA,
+  calculateRSI,
+  calculateRelativeVolume,
+} from './lib/indicators';
+import {
+  Company,
+  PriceRecord,
+  PriceRecordWithIndicators,
+  IntrospectionReport,
+  TimeRange,
+} from './types';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
 import { SchemaInspector } from './components/SchemaInspector';
@@ -104,13 +116,33 @@ export default function App() {
     }
   }, [selectedSymbol, loadPrices]);
 
-  // 3. Filter Price History by selected Time Range
-  const filteredPrices = useMemo(() => {
-    if (!priceHistory.length || timeRange === 'ALL') {
-      return priceHistory;
+  // 3. Calculate technical indicators on the full chronological series first
+  const priceHistoryWithIndicators = useMemo<PriceRecordWithIndicators[]>(() => {
+    if (!priceHistory || priceHistory.length === 0) return [];
+
+    const sma20 = calculateSMA(priceHistory, 20);
+    const sma50 = calculateSMA(priceHistory, 50);
+    const ema20 = calculateEMA(priceHistory, 20);
+    const rsi14 = calculateRSI(priceHistory, 14);
+    const rvol = calculateRelativeVolume(priceHistory, 20);
+
+    return priceHistory.map((item, idx) => ({
+      ...item,
+      sma20: sma20[idx] ?? null,
+      sma50: sma50[idx] ?? null,
+      ema20: ema20[idx] ?? null,
+      rsi14: rsi14[idx] ?? null,
+      relativeVolume: rvol[idx] ?? null,
+    }));
+  }, [priceHistory]);
+
+  // 4. Filter Price History by selected Time Range while preserving pre-computed indicators
+  const filteredPrices = useMemo<PriceRecordWithIndicators[]>(() => {
+    if (!priceHistoryWithIndicators.length || timeRange === 'ALL') {
+      return priceHistoryWithIndicators;
     }
 
-    const latestDateStr = priceHistory[priceHistory.length - 1].date;
+    const latestDateStr = priceHistoryWithIndicators[priceHistoryWithIndicators.length - 1].date;
     const latestDate = new Date(latestDateStr);
 
     let monthsBack = 12;
@@ -123,22 +155,33 @@ export default function App() {
     cutoffDate.setMonth(cutoffDate.getMonth() - monthsBack);
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
 
-    return priceHistory.filter((item) => item.date >= cutoffStr);
-  }, [priceHistory, timeRange]);
+    return priceHistoryWithIndicators.filter((item) => item.date >= cutoffStr);
+  }, [priceHistoryWithIndicators, timeRange]);
 
   // Status Line Metrics (Calculated from actual data)
   const statusDetails = useMemo(() => {
-    if (!priceHistory || priceHistory.length === 0) return null;
-    const firstItem = priceHistory[0];
-    const latestItem = priceHistory[priceHistory.length - 1];
+    if (!priceHistoryWithIndicators || priceHistoryWithIndicators.length === 0) return null;
+    const firstItem = priceHistoryWithIndicators[0];
+    const latestItem = priceHistoryWithIndicators[priceHistoryWithIndicators.length - 1];
+
+    // Relative Volume for latest session:
+    // If under 20 sessions of history exist, show "insufficient history" rather than a wrong number
+    let relativeVolumeText = 'insufficient history';
+    const hasEnoughRvolHistory = priceHistoryWithIndicators.length >= 20 && latestItem.relativeVolume !== null;
+    if (hasEnoughRvolHistory) {
+      relativeVolumeText = `${latestItem.relativeVolume!.toFixed(1)}x`;
+    }
+
     return {
       latestDate: latestItem.date,
       firstDate: firstItem.date,
       latestClose: latestItem.close,
-      totalSessions: priceHistory.length,
+      totalSessions: priceHistoryWithIndicators.length,
       filteredSessions: filteredPrices.length,
+      relativeVolumeText,
+      hasEnoughRvolHistory,
     };
-  }, [priceHistory, filteredPrices]);
+  }, [priceHistoryWithIndicators, filteredPrices]);
 
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans antialiased">
@@ -268,7 +311,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-neutral-500 shrink-0" />
                 {statusDetails ? (
-                  <div className="text-neutral-700">
+                  <div className="text-neutral-700 flex flex-wrap items-center gap-y-1">
                     <span className="text-neutral-500">Most recent data for </span>
                     <span className="font-mono font-bold text-neutral-900">{selectedSymbol}</span>:
                     <span className="font-mono font-semibold text-neutral-900 ml-1.5 px-2 py-0.5 rounded-sm bg-neutral-100">
@@ -277,6 +320,19 @@ export default function App() {
                     <span className="text-neutral-400 mx-1.5">|</span>
                     <span className="text-neutral-600">
                       {statusDetails.totalSessions} total trading sessions recorded ({statusDetails.firstDate} to {statusDetails.latestDate})
+                    </span>
+                    <span className="text-neutral-400 mx-1.5">|</span>
+                    <span className="text-neutral-700">
+                      Relative Volume:{' '}
+                      <span
+                        className={`font-mono font-semibold px-1.5 py-0.5 rounded-sm ${
+                          statusDetails.hasEnoughRvolHistory
+                            ? 'bg-neutral-100 text-neutral-900'
+                            : 'bg-neutral-100 text-neutral-500 italic'
+                        }`}
+                      >
+                        {statusDetails.relativeVolumeText}
+                      </span>
                     </span>
                   </div>
                 ) : isLoadingPrices ? (

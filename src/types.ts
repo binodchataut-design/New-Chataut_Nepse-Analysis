@@ -32,3 +32,11 @@ export interface IntrospectionReport {
 }
 
 export type TimeRange = '1M' | '3M' | '6M' | '1Y' | 'ALL';
+
+export interface PriceRecordWithIndicators extends PriceRecord {
+  sma20: number | null;
+  sma50: number | null;
+  ema20: number | null;
+  rsi14: number | null;
+  relativeVolume: number | null;
+}

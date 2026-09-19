@@ -1,8 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Read from Vite environment variables (or injected process.env via vite define)
-const supabaseUrl: string = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const supabaseAnonKey: string = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+// Read from Vite environment variables (or injected process.env via vite define / node)
+const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || '';
+const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || '';
+const supabaseUrl: string = envUrl.trim();
+const supabaseAnonKey: string = envKey.trim();
 
 export interface SupabaseConfigStatus {
   isConfigured: boolean;
