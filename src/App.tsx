@@ -20,7 +20,10 @@ import {
   TimeRange,
   TabType,
   MarketOverviewData,
+  MarketScanResult,
+  MarketScanProgress,
 } from './types';
+import { scanMarketSetups } from './lib/marketScanner';
 import { Dashboard } from './components/Dashboard';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
@@ -61,6 +64,11 @@ export default function App() {
 
   const [isInspectingSchema, setIsInspectingSchema] = useState<boolean>(false);
   const [isLoadingMarketOverview, setIsLoadingMarketOverview] = useState<boolean>(false);
+
+  // Market Scanner State (Phase 6)
+  const [scanResult, setScanResult] = useState<MarketScanResult | null>(null);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [scanProgress, setScanProgress] = useState<MarketScanProgress | null>(null);
 
   // 1. Initial Load: Schema introspection & Companies list
   const initializeData = useCallback(async () => {
@@ -109,12 +117,44 @@ export default function App() {
     }
   }, [configStatus.isConfigured]);
 
+  // Phase 6: Market Scanner execution (concurrency 8-10, progress reporting)
+  const runMarketScan = useCallback(async () => {
+    if (!configStatus.isConfigured || isScanning) return;
+    setIsScanning(true);
+    try {
+      const result = await scanMarketSetups({
+        concurrency: 8,
+        onProgress: (progress) => {
+          setScanProgress(progress);
+        },
+      });
+      setScanResult(result);
+    } catch (err) {
+      console.error('Market scan failed:', err);
+    } finally {
+      setIsScanning(false);
+    }
+  }, [configStatus.isConfigured, isScanning]);
+
   useEffect(() => {
     if (configStatus.isConfigured) {
       initializeData();
       loadMarketOverviewData();
     }
   }, [configStatus.isConfigured, initializeData, loadMarketOverviewData]);
+
+  // Automatically run scan on first load when Dashboard tab is open, cached in state
+  useEffect(() => {
+    if (configStatus.isConfigured && activeTab === 'dashboard' && !scanResult && !isScanning) {
+      runMarketScan();
+    }
+  }, [configStatus.isConfigured, activeTab, scanResult, isScanning, runMarketScan]);
+
+  // Quick navigation handler from scanner row to Chart tab
+  const handleSelectSymbolAndNavigate = useCallback((symbol: string) => {
+    setSelectedSymbol(symbol);
+    setActiveTab('chart');
+  }, []);
 
   // 3. Load Price History whenever selectedSymbol changes
   const loadPrices = useCallback(async (symbol: string) => {
@@ -323,7 +363,7 @@ export default function App() {
               })}
             </nav>
 
-            {/* TAB 1: DASHBOARD (Market Overview) */}
+            {/* TAB 1: DASHBOARD (Market Overview & Scanner) */}
             {activeTab === 'dashboard' && (
               <section id="dashboard-tab-content">
                 <Dashboard
@@ -331,6 +371,11 @@ export default function App() {
                   isLoading={isLoadingMarketOverview}
                   onRefresh={loadMarketOverviewData}
                   onNavigateToChart={() => setActiveTab('chart')}
+                  scanResult={scanResult}
+                  isScanning={isScanning}
+                  scanProgress={scanProgress}
+                  onRescan={runMarketScan}
+                  onSelectSymbolAndNavigate={handleSelectSymbolAndNavigate}
                 />
               </section>
             )}

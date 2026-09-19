@@ -1,5 +1,10 @@
 import React from 'react';
-import { MarketOverviewData } from '../types';
+import {
+  MarketOverviewData,
+  MarketScanProgress,
+  MarketScanResult,
+} from '../types';
+import { MarketScannerSection } from './MarketScannerSection';
 import {
   TrendingUp,
   TrendingDown,
@@ -10,7 +15,6 @@ import {
   RefreshCw,
   Clock,
   Layers,
-  Sparkles,
   PieChart,
   Info,
 } from 'lucide-react';
@@ -20,6 +24,11 @@ interface DashboardProps {
   isLoading: boolean;
   onRefresh: () => void;
   onNavigateToChart: () => void;
+  scanResult: MarketScanResult | null;
+  isScanning: boolean;
+  scanProgress: MarketScanProgress | null;
+  onRescan: () => void;
+  onSelectSymbolAndNavigate: (symbol: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -27,6 +36,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isLoading,
   onRefresh,
   onNavigateToChart,
+  scanResult,
+  isScanning,
+  scanProgress,
+  onRescan,
+  onSelectSymbolAndNavigate,
 }) => {
   const indexStatus = data?.indexStatus;
   const volumeTurnover = data?.volumeTurnover;
@@ -339,31 +353,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Section 4: Placeholder for High-Probability Scanner */}
-      <div className="p-6 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-neutral-200 text-neutral-700">
-              <Sparkles className="w-4 h-4 text-neutral-600" />
-            </span>
-            <h4 className="text-sm font-bold text-neutral-900">
-              High Probability Stocks — Coming in a future phase
-            </h4>
-          </div>
-          <p className="text-xs text-neutral-500 max-w-xl">
-            A multi-symbol scanner scanning all 437 NEPSE companies against our verified statistical setups (SMA Bullish Crosses, RSI Oversold Recoveries) will be introduced in an upcoming phase.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onNavigateToChart}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-2xs transition-colors shrink-0"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Go to Interactive Chart</span>
-        </button>
-      </div>
+      {/* Section 4: Market-Wide Setup Scanner */}
+      <MarketScannerSection
+        scanResult={scanResult}
+        isScanning={isScanning}
+        scanProgress={scanProgress}
+        onRescan={onRescan}
+        onSelectSymbolAndNavigate={onSelectSymbolAndNavigate}
+      />
     </div>
   );
 };

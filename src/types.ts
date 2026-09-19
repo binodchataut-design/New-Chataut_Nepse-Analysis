@@ -105,3 +105,33 @@ export interface MarketOverviewData {
   sectorDate: string | null;
   asOfTimestamp: string;
 }
+
+export type SetupType = 'SMA20/50 Bullish Cross' | 'RSI Oversold Recovery';
+
+export interface ScannedSetupMatch {
+  symbol: string;
+  setupName: SetupType;
+  signalDate: string;
+  sessionsAgo: number;
+  hitRate: number | null;
+  successCount: number;
+  totalOccurrences: number;
+  allOccurrencesCount: number;
+  avgForwardReturn: number | null;
+}
+
+export interface MarketScanProgress {
+  scannedCount: number;
+  totalCompanies: number;
+  currentSymbol: string;
+}
+
+export interface MarketScanResult {
+  matches: ScannedSetupMatch[];
+  totalCompanies: number;
+  scannedCount: number;
+  failedCount: number;
+  insufficientHistoryCount: number;
+  durationMs: number;
+  scannedAt: string;
+}
