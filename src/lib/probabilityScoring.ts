@@ -16,6 +16,14 @@ import {
   detectInvertedHammer,
   detectShootingStar,
   detectSpinningTop,
+  detectBullishEngulfing,
+  detectBearishEngulfing,
+  detectBullishHarami,
+  detectBearishHarami,
+  detectPiercingLine,
+  detectDarkCloudCover,
+  detectTweezerTop,
+  detectTweezerBottom,
 } from './candlestickPatterns';
 
 /**
@@ -330,6 +338,30 @@ export function computeSignalsFromConfig(
         break;
       case 'spinning_top':
         signals = detectSpinningTop(data);
+        break;
+      case 'bullish_engulfing':
+        signals = detectBullishEngulfing(data);
+        break;
+      case 'bearish_engulfing':
+        signals = detectBearishEngulfing(data);
+        break;
+      case 'bullish_harami':
+        signals = detectBullishHarami(data);
+        break;
+      case 'bearish_harami':
+        signals = detectBearishHarami(data);
+        break;
+      case 'piercing_line':
+        signals = detectPiercingLine(data);
+        break;
+      case 'dark_cloud_cover':
+        signals = detectDarkCloudCover(data);
+        break;
+      case 'tweezer_top':
+        signals = detectTweezerTop(data);
+        break;
+      case 'tweezer_bottom':
+        signals = detectTweezerBottom(data);
         break;
       default:
         signals = [];

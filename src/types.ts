@@ -174,7 +174,15 @@ export type CandlestickPatternType =
   | 'hanging_man'
   | 'inverted_hammer'
   | 'shooting_star'
-  | 'spinning_top';
+  | 'spinning_top'
+  | 'bullish_engulfing'
+  | 'bearish_engulfing'
+  | 'bullish_harami'
+  | 'bearish_harami'
+  | 'piercing_line'
+  | 'dark_cloud_cover'
+  | 'tweezer_top'
+  | 'tweezer_bottom';
 
 export const CANDLESTICK_PATTERN_LABELS: Record<CandlestickPatternType, string> = {
   doji: 'Doji',
@@ -185,6 +193,14 @@ export const CANDLESTICK_PATTERN_LABELS: Record<CandlestickPatternType, string> 
   inverted_hammer: 'Inverted Hammer',
   shooting_star: 'Shooting Star',
   spinning_top: 'Spinning Top',
+  bullish_engulfing: 'Bullish Engulfing',
+  bearish_engulfing: 'Bearish Engulfing',
+  bullish_harami: 'Bullish Harami',
+  bearish_harami: 'Bearish Harami',
+  piercing_line: 'Piercing Line',
+  dark_cloud_cover: 'Dark Cloud Cover',
+  tweezer_top: 'Tweezer Top',
+  tweezer_bottom: 'Tweezer Bottom',
 };
 
 export interface MACrossConfig {

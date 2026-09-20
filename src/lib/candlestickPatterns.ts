@@ -281,3 +281,307 @@ export function detectSpinningTop(data: PriceRecord[]): number[] {
 
   return matches;
 }
+
+/* ==========================================================================
+   DOUBLE-CANDLE PATTERNS (PHASE 10)
+   All patterns require i >= 1 and both session i-1 and i to have valid geometries
+   (non-zero range). Returns index i of the confirming session.
+   ========================================================================== */
+
+/**
+ * 9. Bullish Engulfing
+ * Formula:
+ *   close1 < open1 (bearish) AND close2 > open2 (bullish) AND open2 <= close1 AND close2 >= open1
+ * Meaning:
+ *   Prior session was bearish; current session opens at or below prior close and rallies
+ *   to close at or above prior open, completely engulfing the prior real body.
+ */
+export function detectBullishEngulfing(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 < open1 &&
+      close2 > open2 &&
+      open2 <= close1 &&
+      close2 >= open1
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 10. Bearish Engulfing
+ * Formula:
+ *   close1 > open1 (bullish) AND close2 < open2 (bearish) AND open2 >= close1 AND close2 <= open1
+ * Meaning:
+ *   Prior session was bullish; current session opens at or above prior close and sells off
+ *   to close at or below prior open, completely engulfing the prior real body.
+ */
+export function detectBearishEngulfing(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 > open1 &&
+      close2 < open2 &&
+      open2 >= close1 &&
+      close2 <= open1
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 11. Bullish Harami
+ * Formula:
+ *   close1 < open1 (bearish, larger body) AND close2 > open2 (bullish) AND
+ *   min(open2, close2) >= min(open1, close1) AND max(open2, close2) <= max(open1, close1) AND body2 < body1
+ * Meaning:
+ *   Large bearish candle followed by a smaller bullish candle whose real body is completely
+ *   contained inside the prior bearish body (indicating declining selling momentum).
+ */
+export function detectBullishHarami(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 < open1 &&
+      close2 > open2 &&
+      Math.min(open2, close2) >= Math.min(open1, close1) &&
+      Math.max(open2, close2) <= Math.max(open1, close1) &&
+      geom2.body < geom1.body
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 12. Bearish Harami
+ * Formula:
+ *   close1 > open1 (bullish, larger body) AND close2 < open2 (bearish) AND
+ *   min(open2, close2) >= min(open1, close1) AND max(open2, close2) <= max(open1, close1) AND body2 < body1
+ * Meaning:
+ *   Large bullish candle followed by a smaller bearish candle whose real body is completely
+ *   contained inside the prior bullish body (indicating declining buying momentum).
+ */
+export function detectBearishHarami(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 > open1 &&
+      close2 < open2 &&
+      Math.min(open2, close2) >= Math.min(open1, close1) &&
+      Math.max(open2, close2) <= Math.max(open1, close1) &&
+      geom2.body < geom1.body
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 13. Piercing Line
+ * Formula:
+ *   close1 < open1 (bearish) AND close2 > open2 (bullish) AND open2 < low1 AND
+ *   close2 > (open1 + close1) / 2 AND close2 < open1
+ * Meaning:
+ *   Bearish candle 1 followed by bullish candle 2 that opens below prior low and recovers
+ *   past the 50% midpoint of body 1, but closes below open1 (does not fully engulf).
+ */
+export function detectPiercingLine(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const low1 = data[i - 1].low;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 < open1 &&
+      close2 > open2 &&
+      open2 < low1 &&
+      close2 > (open1 + close1) / 2 &&
+      close2 < open1
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 14. Dark Cloud Cover
+ * Formula:
+ *   close1 > open1 (bullish) AND close2 < open2 (bearish) AND open2 > high1 AND
+ *   close2 < (open1 + close1) / 2 AND close2 > open1
+ * Meaning:
+ *   Bullish candle 1 followed by bearish candle 2 that opens above prior high and sells off
+ *   more than 50% into body 1, but closes above open1 (does not fully engulf).
+ */
+export function detectDarkCloudCover(data: PriceRecord[]): number[] {
+  if (!data || data.length < 2) return [];
+  const matches: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const high1 = data[i - 1].high;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      close1 > open1 &&
+      close2 < open2 &&
+      open2 > high1 &&
+      close2 < (open1 + close1) / 2 &&
+      close2 > open1
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 15. Tweezer Top
+ * Formula:
+ *   abs(high2 - high1) <= 0.001 * high1 (highs match within 0.1% tolerance) AND
+ *   close1 > open1 (first bullish) AND close2 < open2 (second bearish) AND
+ *   getPriorTrend(data, i) === 'up'
+ * Meaning:
+ *   Uptrend resistance rejection where two consecutive candles touch nearly identical highs
+ *   (within 0.1%), with the first bullish and second bearish.
+ */
+export function detectTweezerTop(data: PriceRecord[]): number[] {
+  if (!data || data.length < 6) return [];
+  const matches: number[] = [];
+
+  for (let i = 5; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const high1 = data[i - 1].high;
+    const high2 = data[i].high;
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      Math.abs(high2 - high1) <= 0.001 * high1 &&
+      close1 > open1 &&
+      close2 < open2 &&
+      getPriorTrend(data, i) === 'up'
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 16. Tweezer Bottom
+ * Formula:
+ *   abs(low2 - low1) <= 0.001 * low1 (lows match within 0.1% tolerance) AND
+ *   close1 < open1 (first bearish) AND close2 > open2 (second bullish) AND
+ *   getPriorTrend(data, i) === 'down'
+ * Meaning:
+ *   Downtrend support confirmation where two consecutive candles touch nearly identical lows
+ *   (within 0.1%), with the first bearish and second bullish.
+ */
+export function detectTweezerBottom(data: PriceRecord[]): number[] {
+  if (!data || data.length < 6) return [];
+  const matches: number[] = [];
+
+  for (let i = 5; i < data.length; i++) {
+    const geom1 = getCandleGeometry(data[i - 1]);
+    const geom2 = getCandleGeometry(data[i]);
+    if (!geom1 || !geom2) continue;
+
+    const low1 = data[i - 1].low;
+    const low2 = data[i].low;
+    const open1 = data[i - 1].open;
+    const close1 = data[i - 1].close;
+    const open2 = data[i].open;
+    const close2 = data[i].close;
+
+    if (
+      Math.abs(low2 - low1) <= 0.001 * low1 &&
+      close1 < open1 &&
+      close2 > open2 &&
+      getPriorTrend(data, i) === 'down'
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
