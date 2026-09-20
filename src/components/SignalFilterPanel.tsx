@@ -3,9 +3,13 @@ import {
   SignalFilterConfig,
   MAType,
   RSIDirection,
+  FilterMode,
+  CandlestickPatternType,
+  CANDLESTICK_PATTERN_LABELS,
   DEFAULT_SIGNAL_FILTER_CONFIG,
 } from '../types';
-import { Sliders, RotateCcw, TrendingUp, Activity } from 'lucide-react';
+import { Sliders, RotateCcw, TrendingUp, Activity, CandlestickChart } from 'lucide-react';
+import { CandlestickHonestyNote } from './CandlestickHonestyNote';
 
 export interface SignalFilterPanelProps {
   config: SignalFilterConfig;
@@ -18,6 +22,8 @@ export interface SignalFilterPanelProps {
   onToggleSlowVisible?: (visible: boolean) => void;
   rsiVisible?: boolean;
   onToggleRsiVisible?: (visible: boolean) => void;
+  candlePatternVisible?: boolean;
+  onToggleCandlePatternVisible?: (visible: boolean) => void;
   title?: string;
   description?: string;
   className?: string;
@@ -33,11 +39,13 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
   onToggleSlowVisible,
   rsiVisible = true,
   onToggleRsiVisible,
+  candlePatternVisible = true,
+  onToggleCandlePatternVisible,
   title,
   description,
   className = '',
 }) => {
-  const handleModeChange = (mode: 'ma_cross' | 'rsi_threshold') => {
+  const handleModeChange = (mode: FilterMode) => {
     onChange({
       ...config,
       mode,
@@ -118,11 +126,19 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
     });
   };
 
+  const handlePatternChange = (candlestickPattern: CandlestickPatternType) => {
+    onChange({
+      ...config,
+      candlestickPattern,
+    });
+  };
+
   const handleReset = () => {
     onChange({
       mode: config.mode, // keep currently selected mode or full reset
       maCross: { ...DEFAULT_SIGNAL_FILTER_CONFIG.maCross },
       rsiThreshold: { ...DEFAULT_SIGNAL_FILTER_CONFIG.rsiThreshold },
+      candlestickPattern: DEFAULT_SIGNAL_FILTER_CONFIG.candlestickPattern,
     });
   };
 
@@ -178,13 +194,26 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
               <Activity className="w-3 h-3 text-indigo-600" />
               <span>RSI Threshold Cross</span>
             </button>
+            <button
+              id="filter-mode-candlestick"
+              type="button"
+              onClick={() => handleModeChange('candlestick')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                config.mode === 'candlestick'
+                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <CandlestickChart className="w-3 h-3 text-amber-600" />
+              <span>Candlestick Pattern</span>
+            </button>
           </div>
 
           <button
             id="reset-filter-defaults-btn"
             type="button"
             onClick={handleReset}
-            title="Reset indicators to defaults (SMA20/50, RSI14/30)"
+            title="Reset indicators to defaults"
             className="p-1.5 rounded-md text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 border border-neutral-200 cursor-pointer transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -276,7 +305,7 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
             Live recompute • Null gaps respected
           </span>
         </div>
-      ) : (
+      ) : config.mode === 'rsi_threshold' ? (
         <div className="flex flex-wrap items-center gap-4 text-xs">
           {/* RSI Controls */}
           <div className="flex items-center gap-2 bg-neutral-50/80 px-3 py-1.5 rounded-lg border border-neutral-200">
@@ -339,6 +368,57 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
           <span className="text-[11px] text-neutral-400 font-mono hidden sm:inline ml-auto">
             Wilder smoothing • Live recompute
           </span>
+        </div>
+      ) : (
+        /* Candlestick Pattern Mode Controls */
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <div className="flex items-center gap-2 bg-neutral-50/80 px-3 py-1.5 rounded-lg border border-neutral-200">
+              {showOverlayToggles && onToggleCandlePatternVisible && (
+                <input
+                  id="toggle-candle-pattern-visible"
+                  type="checkbox"
+                  checked={candlePatternVisible}
+                  onChange={(e) => onToggleCandlePatternVisible(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-neutral-300 cursor-pointer"
+                  title="Toggle pattern markers on chart"
+                />
+              )}
+              <span className="font-semibold text-neutral-700 flex items-center gap-1.5">
+                <CandlestickChart className="w-3.5 h-3.5 text-amber-600" />
+                Select Pattern:
+              </span>
+              <select
+                id="filter-candlestick-pattern-select"
+                value={config.candlestickPattern}
+                onChange={(e) => handlePatternChange(e.target.value as CandlestickPatternType)}
+                className="px-2.5 py-1 font-medium text-xs bg-white border border-neutral-300 rounded-md shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-neutral-900 cursor-pointer"
+              >
+                <option value="hammer">Hammer (Bullish Reversal / Downtrend)</option>
+                <option value="inverted_hammer">Inverted Hammer (Bullish Reversal / Downtrend)</option>
+                <option value="hanging_man">Hanging Man (Bearish Reversal / Uptrend)</option>
+                <option value="shooting_star">Shooting Star (Bearish Reversal / Uptrend)</option>
+                <option value="doji">Doji (Indecision / Equilibrium)</option>
+                <option value="spinning_top">Spinning Top (Indecision / Balanced Shadows)</option>
+                <option value="bullish_marubozu">Bullish Marubozu (Strong Momentum Up)</option>
+                <option value="bearish_marubozu">Bearish Marubozu (Strong Selling Down)</option>
+              </select>
+            </div>
+
+            <div className="text-[11px] font-mono text-neutral-500 bg-neutral-100/70 px-2.5 py-1 rounded-md border border-neutral-200/60">
+              {config.candlestickPattern === 'hammer' && 'Shape: body ≤ 35% range, lower shadow ≥ 2x body, upper shadow ≤ body, prior trend down'}
+              {config.candlestickPattern === 'hanging_man' && 'Shape: body ≤ 35% range, lower shadow ≥ 2x body, upper shadow ≤ body, prior trend up'}
+              {config.candlestickPattern === 'inverted_hammer' && 'Shape: body ≤ 35% range, upper shadow ≥ 2x body, lower shadow ≤ body, prior trend down'}
+              {config.candlestickPattern === 'shooting_star' && 'Shape: body ≤ 35% range, upper shadow ≥ 2x body, lower shadow ≤ body, prior trend up'}
+              {config.candlestickPattern === 'doji' && 'Shape: body ≤ 5% range (negligible real body)'}
+              {config.candlestickPattern === 'bullish_marubozu' && 'Shape: close > open, body ≥ 95% range (little to no shadows)'}
+              {config.candlestickPattern === 'bearish_marubozu' && 'Shape: close < open, body ≥ 95% range (little to no shadows)'}
+              {config.candlestickPattern === 'spinning_top' && 'Shape: body 5-35% range, upper & lower shadows both ≥ body'}
+            </div>
+          </div>
+
+          {/* Persistent Honesty / Caution Note */}
+          <CandlestickHonestyNote />
         </div>
       )}
     </div>

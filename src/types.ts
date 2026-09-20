@@ -164,7 +164,28 @@ export interface BacktestResult {
 
 export type MAType = 'SMA' | 'EMA';
 export type RSIDirection = 'recovery' | 'breakdown';
-export type FilterMode = 'ma_cross' | 'rsi_threshold';
+export type FilterMode = 'ma_cross' | 'rsi_threshold' | 'candlestick';
+
+export type CandlestickPatternType =
+  | 'doji'
+  | 'bullish_marubozu'
+  | 'bearish_marubozu'
+  | 'hammer'
+  | 'hanging_man'
+  | 'inverted_hammer'
+  | 'shooting_star'
+  | 'spinning_top';
+
+export const CANDLESTICK_PATTERN_LABELS: Record<CandlestickPatternType, string> = {
+  doji: 'Doji',
+  bullish_marubozu: 'Bullish Marubozu',
+  bearish_marubozu: 'Bearish Marubozu',
+  hammer: 'Hammer',
+  hanging_man: 'Hanging Man',
+  inverted_hammer: 'Inverted Hammer',
+  shooting_star: 'Shooting Star',
+  spinning_top: 'Spinning Top',
+};
 
 export interface MACrossConfig {
   fastType: MAType;
@@ -183,6 +204,7 @@ export interface SignalFilterConfig {
   mode: FilterMode;
   maCross: MACrossConfig;
   rsiThreshold: RSIThresholdConfig;
+  candlestickPattern: CandlestickPatternType;
 }
 
 export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
@@ -198,5 +220,6 @@ export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
     threshold: 30,
     direction: 'recovery',
   },
+  candlestickPattern: 'hammer',
 };
 

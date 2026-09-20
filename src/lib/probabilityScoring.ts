@@ -4,8 +4,19 @@ import {
   SetupOccurrence,
   SetupScoreResult,
   SignalFilterConfig,
+  CANDLESTICK_PATTERN_LABELS,
 } from '../types';
 import { calculateSMA, calculateEMA, calculateRSI } from './indicators';
+import {
+  detectDoji,
+  detectBullishMarubozu,
+  detectBearishMarubozu,
+  detectHammer,
+  detectHangingMan,
+  detectInvertedHammer,
+  detectShootingStar,
+  detectSpinningTop,
+} from './candlestickPatterns';
 
 /**
  * Detects "SMA20/50 Bullish Cross" signals:
@@ -282,7 +293,7 @@ export function computeSignalsFromConfig(
 
     const signals = detectMACrossSignals(fastSeries, slowSeries);
     return { signals, fastSeries, slowSeries };
-  } else {
+  } else if (config.mode === 'rsi_threshold') {
     const period = Math.max(2, Math.round(config.rsiThreshold.period || 14));
     const threshold = Number.isFinite(config.rsiThreshold.threshold)
       ? config.rsiThreshold.threshold
@@ -292,6 +303,38 @@ export function computeSignalsFromConfig(
     const rsiSeries = calculateRSI(data, period);
     const signals = detectRSIThresholdSignals(rsiSeries, threshold, direction);
     return { signals, rsiSeries };
+  } else {
+    // Candlestick Pattern Detection
+    let signals: number[] = [];
+    switch (config.candlestickPattern) {
+      case 'doji':
+        signals = detectDoji(data);
+        break;
+      case 'bullish_marubozu':
+        signals = detectBullishMarubozu(data);
+        break;
+      case 'bearish_marubozu':
+        signals = detectBearishMarubozu(data);
+        break;
+      case 'hammer':
+        signals = detectHammer(data);
+        break;
+      case 'hanging_man':
+        signals = detectHangingMan(data);
+        break;
+      case 'inverted_hammer':
+        signals = detectInvertedHammer(data);
+        break;
+      case 'shooting_star':
+        signals = detectShootingStar(data);
+        break;
+      case 'spinning_top':
+        signals = detectSpinningTop(data);
+        break;
+      default:
+        signals = [];
+    }
+    return { signals };
   }
 }
 
@@ -301,12 +344,15 @@ export function computeSignalsFromConfig(
 export function getSignalSetupDescription(config: SignalFilterConfig): string {
   if (config.mode === 'ma_cross') {
     return `${config.maCross.fastType}(${config.maCross.fastPeriod}) / ${config.maCross.slowType}(${config.maCross.slowPeriod}) Bullish Cross`;
-  } else {
+  } else if (config.mode === 'rsi_threshold') {
     const dirLabel =
       config.rsiThreshold.direction === 'recovery'
         ? `Recovery (crosses ≥ ${config.rsiThreshold.threshold})`
         : `Breakdown (crosses ≤ ${config.rsiThreshold.threshold})`;
     return `RSI(${config.rsiThreshold.period}) ${dirLabel}`;
+  } else {
+    const label = CANDLESTICK_PATTERN_LABELS[config.candlestickPattern] || 'Candlestick Pattern';
+    return `${label} Pattern`;
   }
 }
 

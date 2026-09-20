@@ -4,6 +4,7 @@ import {
   SetupScoreResult,
   SignalFilterConfig,
   DEFAULT_SIGNAL_FILTER_CONFIG,
+  CANDLESTICK_PATTERN_LABELS,
 } from '../types';
 import {
   scoreSetup,
@@ -21,6 +22,7 @@ import {
   Clock,
   Layers,
   Activity,
+  CandlestickChart,
 } from 'lucide-react';
 
 interface ProbabilityScoringProps {
@@ -60,12 +62,16 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
     const category =
       filterConfig.mode === 'ma_cross'
         ? 'Trend-Following Setup'
-        : 'Mean-Reversion Setup';
+        : filterConfig.mode === 'rsi_threshold'
+        ? 'Mean-Reversion Setup'
+        : 'Candlestick Pattern Setup';
 
     const formula =
       filterConfig.mode === 'ma_cross'
         ? `${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
-        : `rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`;
+        : filterConfig.mode === 'rsi_threshold'
+        ? `rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`
+        : `${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} single-candle geometry satisfied at session i`;
 
     return {
       scoreResult: result,
@@ -205,8 +211,10 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
           icon={
             filterConfig.mode === 'ma_cross' ? (
               <TrendingUp className="w-4 h-4 text-blue-600" />
-            ) : (
+            ) : filterConfig.mode === 'rsi_threshold' ? (
               <Activity className="w-4 h-4 text-indigo-600" />
+            ) : (
+              <CandlestickChart className="w-4 h-4 text-amber-600" />
             )
           }
         />

@@ -4,6 +4,7 @@ import {
   PriceRecordWithIndicators,
   SignalFilterConfig,
   DEFAULT_SIGNAL_FILTER_CONFIG,
+  CANDLESTICK_PATTERN_LABELS,
 } from '../types';
 import { runBacktest } from '../lib/backtestEngine';
 import {
@@ -22,6 +23,7 @@ import {
   Clock,
   Info,
   ShieldAlert,
+  CandlestickChart,
 } from 'lucide-react';
 
 interface BacktestLabProps {
@@ -65,12 +67,16 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
     const category =
       filterConfig.mode === 'ma_cross'
         ? 'Trend-Following Setup'
-        : 'Mean-Reversion Setup';
+        : filterConfig.mode === 'rsi_threshold'
+        ? 'Mean-Reversion Setup'
+        : 'Candlestick Pattern Setup';
 
     const formula =
       filterConfig.mode === 'ma_cross'
         ? `Entry next open after: ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
-        : `Entry next open after: rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`;
+        : filterConfig.mode === 'rsi_threshold'
+        ? `Entry next open after: rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`
+        : `Entry next open after: ${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} single-candle pattern on session i`;
 
     return {
       result: bt,
@@ -244,8 +250,10 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
           icon={
             filterConfig.mode === 'ma_cross' ? (
               <TrendingUp className="w-4 h-4 text-blue-600" />
-            ) : (
+            ) : filterConfig.mode === 'rsi_threshold' ? (
               <Activity className="w-4 h-4 text-indigo-600" />
+            ) : (
+              <CandlestickChart className="w-4 h-4 text-amber-600" />
             )
           }
         />

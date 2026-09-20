@@ -17,10 +17,13 @@ import {
   PriceRecordWithIndicators,
   SignalFilterConfig,
   DEFAULT_SIGNAL_FILTER_CONFIG,
+  CANDLESTICK_PATTERN_LABELS,
 } from '../types';
 import { calculateSMA, calculateEMA, calculateRSI } from '../lib/indicators';
+import { computeSignalsFromConfig } from '../lib/probabilityScoring';
 import { SignalFilterPanel } from './SignalFilterPanel';
-import { TrendingUp, TrendingDown, AlertCircle, Calendar } from 'lucide-react';
+import { CandlestickHonestyNote } from './CandlestickHonestyNote';
+import { TrendingUp, TrendingDown, AlertCircle, Calendar, CandlestickChart } from 'lucide-react';
 
 interface PriceChartProps {
   symbol: string;
@@ -33,6 +36,8 @@ interface ChartRecordWithDynamicIndicators extends PriceRecordWithIndicators {
   fastMA: number | null;
   slowMA: number | null;
   chartRsi: number | null;
+  patternMarkerPrice: number | null;
+  patternName: string | null;
 }
 
 interface CustomTooltipProps {
@@ -46,6 +51,20 @@ interface CustomTooltipProps {
   slowLabel?: string;
   rsiLabel?: string;
 }
+
+const CustomPatternMarker: React.FC<{
+  cx?: number;
+  cy?: number;
+  payload?: ChartRecordWithDynamicIndicators;
+}> = ({ cx, cy, payload }) => {
+  if (cx == null || cy == null || payload?.patternMarkerPrice == null) return null;
+  return (
+    <g transform={`translate(${cx}, ${cy})`}>
+      <circle r={6} fill="#f59e0b" fillOpacity={0.25} stroke="#d97706" strokeWidth={1.5} />
+      <circle r={2.5} fill="#d97706" />
+    </g>
+  );
+};
 
 const CustomPriceTooltip: React.FC<CustomTooltipProps> = ({
   active,
@@ -134,6 +153,16 @@ const CustomPriceTooltip: React.FC<CustomTooltipProps> = ({
             )}
           </div>
         )}
+
+        {item.patternName && (
+          <div className="pt-1.5 mt-1.5 border-t border-neutral-800 flex justify-between items-center text-amber-300">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              Pattern:
+            </span>
+            <span className="font-bold text-amber-200">{item.patternName}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -203,6 +232,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showFastMA, setShowFastMA] = useState<boolean>(true);
   const [showSlowMA, setShowSlowMA] = useState<boolean>(true);
   const [showRSI, setShowRSI] = useState<boolean>(true);
+  const [showCandlePattern, setShowCandlePattern] = useState<boolean>(true);
+
+  // Set of session indices where pattern fired (if in candlestick mode)
+  const patternSignalSet = useMemo(() => {
+    if (filterConfig.mode !== 'candlestick' || !data || data.length === 0) {
+      return new Set<number>();
+    }
+    const { signals } = computeSignalsFromConfig(data, filterConfig);
+    return new Set<number>(signals);
+  }, [data, filterConfig]);
 
   // Dynamically compute indicator series based on user filter parameters
   const chartData = useMemo<ChartRecordWithDynamicIndicators[]>(() => {
@@ -229,8 +268,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       fastMA: fast[i] ?? null,
       slowMA: slow[i] ?? null,
       chartRsi: rsi[i] ?? null,
+      patternMarkerPrice:
+        filterConfig.mode === 'candlestick' && showCandlePattern && patternSignalSet.has(i)
+          ? d.close
+          : null,
+      patternName:
+        filterConfig.mode === 'candlestick' && patternSignalSet.has(i)
+          ? CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern] || 'Pattern'
+          : null,
     }));
-  }, [data, filterConfig]);
+  }, [data, filterConfig, showCandlePattern, patternSignalSet]);
 
   // Compute price change and metrics from real data
   const metrics = useMemo(() => {
@@ -367,8 +414,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             )}
           </div>
-          <div className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
+          <div className="text-xs text-neutral-500 mt-1 flex flex-wrap items-center gap-2">
             <span>Historical Price Series ({data.length} trading sessions displayed)</span>
+            {filterConfig.mode === 'candlestick' && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                <CandlestickChart className="w-3 h-3 text-amber-600" />
+                <span>
+                  {patternSignalSet.size} {CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]}
+                  {patternSignalSet.size < 10 && ' (caution: <10 occurrences)'}
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -403,6 +459,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           onToggleSlowVisible={setShowSlowMA}
           rsiVisible={showRSI}
           onToggleRsiVisible={setShowRSI}
+          candlePatternVisible={showCandlePattern}
+          onToggleCandlePatternVisible={setShowCandlePattern}
           title="Chart Indicator Overlays & Parameters"
           description="Adjust indicator types, periods, and thresholds to update overlay lines and subcharts in real time."
         />
@@ -481,6 +539,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   stroke="#d97706"
                   strokeWidth={1.75}
                   dot={false}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+              )}
+
+              {/* Candlestick Pattern Overlay Markers */}
+              {filterConfig.mode === 'candlestick' && showCandlePattern && (
+                <Line
+                  type="monotone"
+                  dataKey="patternMarkerPrice"
+                  name={`Pattern: ${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]}`}
+                  stroke="transparent"
+                  dot={<CustomPatternMarker />}
+                  activeDot={{ r: 6, fill: '#f59e0b', stroke: '#78350f', strokeWidth: 2 }}
                   connectNulls={false}
                   isAnimationActive={false}
                 />
