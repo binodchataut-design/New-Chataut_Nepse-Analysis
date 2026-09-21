@@ -24,6 +24,12 @@ import {
   detectDarkCloudCover,
   detectTweezerTop,
   detectTweezerBottom,
+  detectMorningStar,
+  detectEveningStar,
+  detectThreeWhiteSoldiers,
+  detectThreeBlackCrows,
+  detectThreeInsideUp,
+  detectThreeInsideDown,
 } from './candlestickPatterns';
 
 /**
@@ -362,6 +368,24 @@ export function computeSignalsFromConfig(
         break;
       case 'tweezer_bottom':
         signals = detectTweezerBottom(data);
+        break;
+      case 'morning_star':
+        signals = detectMorningStar(data);
+        break;
+      case 'evening_star':
+        signals = detectEveningStar(data);
+        break;
+      case 'three_white_soldiers':
+        signals = detectThreeWhiteSoldiers(data);
+        break;
+      case 'three_black_crows':
+        signals = detectThreeBlackCrows(data);
+        break;
+      case 'three_inside_up':
+        signals = detectThreeInsideUp(data);
+        break;
+      case 'three_inside_down':
+        signals = detectThreeInsideDown(data);
         break;
       default:
         signals = [];

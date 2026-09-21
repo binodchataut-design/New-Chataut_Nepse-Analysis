@@ -585,3 +585,277 @@ export function detectTweezerBottom(data: PriceRecord[]): number[] {
 
   return matches;
 }
+
+/* ==========================================================================
+   TRIPLE-CANDLE PATTERNS (PHASE 11)
+   All patterns require i >= 2 and all three sessions (A = i-2, B = i-1, C = i)
+   to have valid geometries (non-zero range). Returns index i of the third candle C.
+   ========================================================================== */
+
+/**
+ * 17. Morning Star
+ * Formula:
+ *   !isBullishA AND bodyRatioA >= 0.5 AND bodyRatioB <= 0.35 AND
+ *   max(openB, closeB) <= closeA AND isBullishC AND bodyRatioC >= 0.5 AND
+ *   closeC > (openA + closeA) / 2
+ * Meaning:
+ *   Bullish reversal: large bearish candle A, followed by small star candle B
+ *   sitting at/below close A, followed by large bullish candle C closing above A's midpoint.
+ */
+export function detectMorningStar(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const closeC = data[i].close;
+
+    if (
+      !geomA.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      geomB.bodyRatio <= 0.35 &&
+      Math.max(openB, closeB) <= closeA &&
+      geomC.isBullishCandle &&
+      geomC.bodyRatio >= 0.5 &&
+      closeC > (openA + closeA) / 2
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 18. Evening Star
+ * Formula:
+ *   isBullishA AND bodyRatioA >= 0.5 AND bodyRatioB <= 0.35 AND
+ *   min(openB, closeB) >= closeA AND !isBullishC AND bodyRatioC >= 0.5 AND
+ *   closeC < (openA + closeA) / 2
+ * Meaning:
+ *   Bearish reversal (mirror of Morning Star): large bullish candle A, followed by small star B
+ *   sitting at/above close A, followed by large bearish candle C closing below A's midpoint.
+ */
+export function detectEveningStar(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const closeC = data[i].close;
+
+    if (
+      geomA.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      geomB.bodyRatio <= 0.35 &&
+      Math.min(openB, closeB) >= closeA &&
+      !geomC.isBullishCandle &&
+      geomC.bodyRatio >= 0.5 &&
+      closeC < (openA + closeA) / 2
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 19. Three White Soldiers
+ * Formula:
+ *   isBullishA AND isBullishB AND isBullishC AND
+ *   bodyRatioA >= 0.5 AND bodyRatioB >= 0.5 AND bodyRatioC >= 0.5 AND
+ *   openB > openA AND openB < closeA AND closeB > closeA AND
+ *   openC > openB AND openC < closeB AND closeC > closeB
+ * Meaning:
+ *   Bullish trend continuation/reversal: three consecutive long green candles,
+ *   each opening within the prior body and closing higher than the prior close.
+ */
+export function detectThreeWhiteSoldiers(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const openC = data[i].open;
+    const closeC = data[i].close;
+
+    if (
+      geomA.isBullishCandle &&
+      geomB.isBullishCandle &&
+      geomC.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      geomB.bodyRatio >= 0.5 &&
+      geomC.bodyRatio >= 0.5 &&
+      openB > openA &&
+      openB < closeA &&
+      closeB > closeA &&
+      openC > openB &&
+      openC < closeB &&
+      closeC > closeB
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 20. Three Black Crows
+ * Formula:
+ *   !isBullishA AND !isBullishB AND !isBullishC AND
+ *   bodyRatioA >= 0.5 AND bodyRatioB >= 0.5 AND bodyRatioC >= 0.5 AND
+ *   openB < openA AND openB > closeA AND closeB < closeA AND
+ *   openC < openB AND openC > closeB AND closeC < closeB
+ * Meaning:
+ *   Bearish trend continuation/reversal (mirror of Three White Soldiers): three consecutive
+ *   long red candles, each opening within the prior body and closing lower than the prior close.
+ */
+export function detectThreeBlackCrows(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const openC = data[i].open;
+    const closeC = data[i].close;
+
+    if (
+      !geomA.isBullishCandle &&
+      !geomB.isBullishCandle &&
+      !geomC.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      geomB.bodyRatio >= 0.5 &&
+      geomC.bodyRatio >= 0.5 &&
+      openB < openA &&
+      openB > closeA &&
+      closeB < closeA &&
+      openC < openB &&
+      openC > closeB &&
+      closeC < closeB
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 21. Three Inside Up
+ * Formula:
+ *   !isBullishA AND bodyRatioA >= 0.5 AND isBullishB AND bodyB < bodyA AND
+ *   min(openB, closeB) >= min(openA, closeA) AND max(openB, closeB) <= max(openA, closeA) AND
+ *   isBullishC AND closeC > openA
+ * Meaning:
+ *   Bullish confirmation of Bullish Harami: large red candle A, harami green candle B
+ *   inside A's body, followed by green candle C closing above A's open.
+ */
+export function detectThreeInsideUp(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const closeC = data[i].close;
+
+    if (
+      !geomA.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      geomB.isBullishCandle &&
+      geomB.body < geomA.body &&
+      Math.min(openB, closeB) >= Math.min(openA, closeA) &&
+      Math.max(openB, closeB) <= Math.max(openA, closeA) &&
+      geomC.isBullishCandle &&
+      closeC > openA
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * 22. Three Inside Down
+ * Formula:
+ *   isBullishA AND bodyRatioA >= 0.5 AND !isBullishB AND bodyB < bodyA AND
+ *   min(openB, closeB) >= min(openA, closeA) AND max(openB, closeB) <= max(openA, closeA) AND
+ *   !isBullishC AND closeC < openA
+ * Meaning:
+ *   Bearish confirmation of Bearish Harami (mirror of Three Inside Up): large green candle A,
+ *   harami red candle B inside A's body, followed by red candle C closing below A's open.
+ */
+export function detectThreeInsideDown(data: PriceRecord[]): number[] {
+  if (!data || data.length < 3) return [];
+  const matches: number[] = [];
+
+  for (let i = 2; i < data.length; i++) {
+    const geomA = getCandleGeometry(data[i - 2]);
+    const geomB = getCandleGeometry(data[i - 1]);
+    const geomC = getCandleGeometry(data[i]);
+    if (!geomA || !geomB || !geomC) continue;
+
+    const openA = data[i - 2].open;
+    const closeA = data[i - 2].close;
+    const openB = data[i - 1].open;
+    const closeB = data[i - 1].close;
+    const closeC = data[i].close;
+
+    if (
+      geomA.isBullishCandle &&
+      geomA.bodyRatio >= 0.5 &&
+      !geomB.isBullishCandle &&
+      geomB.body < geomA.body &&
+      Math.min(openB, closeB) >= Math.min(openA, closeA) &&
+      Math.max(openB, closeB) <= Math.max(openA, closeA) &&
+      !geomC.isBullishCandle &&
+      closeC < openA
+    ) {
+      matches.push(i);
+    }
+  }
+
+  return matches;
+}

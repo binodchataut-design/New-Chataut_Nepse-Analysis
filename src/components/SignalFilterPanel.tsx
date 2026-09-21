@@ -414,6 +414,14 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
                   <option value="tweezer_top">{CANDLESTICK_PATTERN_LABELS.tweezer_top} (Uptrend Reversal / Matching Highs)</option>
                   <option value="tweezer_bottom">{CANDLESTICK_PATTERN_LABELS.tweezer_bottom} (Downtrend Reversal / Matching Lows)</option>
                 </optgroup>
+                <optgroup label="Triple-Candle Patterns">
+                  <option value="morning_star">{CANDLESTICK_PATTERN_LABELS.morning_star} (Bullish Reversal)</option>
+                  <option value="evening_star">{CANDLESTICK_PATTERN_LABELS.evening_star} (Bearish Reversal)</option>
+                  <option value="three_white_soldiers">{CANDLESTICK_PATTERN_LABELS.three_white_soldiers} (Strong Bullish Continuation)</option>
+                  <option value="three_black_crows">{CANDLESTICK_PATTERN_LABELS.three_black_crows} (Strong Bearish Continuation)</option>
+                  <option value="three_inside_up">{CANDLESTICK_PATTERN_LABELS.three_inside_up} (Bullish Harami Confirmation)</option>
+                  <option value="three_inside_down">{CANDLESTICK_PATTERN_LABELS.three_inside_down} (Bearish Harami Confirmation)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -434,6 +442,12 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
               {config.candlestickPattern === 'dark_cloud_cover' && 'Shape: bullish candle 1, bearish candle 2 opens > high1 and closes between midpoint and open of body 1'}
               {config.candlestickPattern === 'tweezer_top' && 'Shape: highs match within 0.1%, candle 1 bullish, candle 2 bearish, prior trend up'}
               {config.candlestickPattern === 'tweezer_bottom' && 'Shape: lows match within 0.1%, candle 1 bearish, candle 2 bullish, prior trend down'}
+              {config.candlestickPattern === 'morning_star' && 'Shape: large bearish candle A, small star B at/below close A, large bullish candle C closing above A midpoint'}
+              {config.candlestickPattern === 'evening_star' && 'Shape: large bullish candle A, small star B at/above close A, large bearish candle C closing below A midpoint'}
+              {config.candlestickPattern === 'three_white_soldiers' && 'Shape: 3 consecutive large green candles, each opening within prior body and closing higher'}
+              {config.candlestickPattern === 'three_black_crows' && 'Shape: 3 consecutive large red candles, each opening within prior body and closing lower'}
+              {config.candlestickPattern === 'three_inside_up' && 'Shape: large bearish candle A, bullish harami B inside A body, bullish candle C closing above A open'}
+              {config.candlestickPattern === 'three_inside_down' && 'Shape: large bullish candle A, bearish harami B inside A body, bearish candle C closing below A open'}
             </div>
           </div>
 

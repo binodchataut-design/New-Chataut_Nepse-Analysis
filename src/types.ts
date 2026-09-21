@@ -182,7 +182,13 @@ export type CandlestickPatternType =
   | 'piercing_line'
   | 'dark_cloud_cover'
   | 'tweezer_top'
-  | 'tweezer_bottom';
+  | 'tweezer_bottom'
+  | 'morning_star'
+  | 'evening_star'
+  | 'three_white_soldiers'
+  | 'three_black_crows'
+  | 'three_inside_up'
+  | 'three_inside_down';
 
 export const CANDLESTICK_PATTERN_LABELS: Record<CandlestickPatternType, string> = {
   doji: 'Doji',
@@ -201,6 +207,12 @@ export const CANDLESTICK_PATTERN_LABELS: Record<CandlestickPatternType, string> 
   dark_cloud_cover: 'Dark Cloud Cover',
   tweezer_top: 'Tweezer Top',
   tweezer_bottom: 'Tweezer Bottom',
+  morning_star: 'Morning Star',
+  evening_star: 'Evening Star',
+  three_white_soldiers: 'Three White Soldiers',
+  three_black_crows: 'Three Black Crows',
+  three_inside_up: 'Three Inside Up',
+  three_inside_down: 'Three Inside Down',
 };
 
 export interface MACrossConfig {
