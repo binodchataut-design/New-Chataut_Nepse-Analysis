@@ -76,7 +76,7 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
         ? `Entry next open after: ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
         : filterConfig.mode === 'rsi_threshold'
         ? `Entry next open after: rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`
-        : `Entry next open after: ${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} single-candle pattern on session i`;
+        : `Entry next open after: ${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} pattern on session i`;
 
     return {
       result: bt,

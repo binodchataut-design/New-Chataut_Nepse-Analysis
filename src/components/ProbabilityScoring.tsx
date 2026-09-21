@@ -71,7 +71,7 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
         ? `${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
         : filterConfig.mode === 'rsi_threshold'
         ? `rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`
-        : `${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} single-candle geometry satisfied at session i`;
+        : `${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} candlestick pattern geometry satisfied at session i`;
 
     return {
       scoreResult: result,

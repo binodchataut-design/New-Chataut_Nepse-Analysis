@@ -394,14 +394,26 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
                 onChange={(e) => handlePatternChange(e.target.value as CandlestickPatternType)}
                 className="px-2.5 py-1 font-medium text-xs bg-white border border-neutral-300 rounded-md shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-neutral-900 cursor-pointer"
               >
-                <option value="hammer">Hammer (Bullish Reversal / Downtrend)</option>
-                <option value="inverted_hammer">Inverted Hammer (Bullish Reversal / Downtrend)</option>
-                <option value="hanging_man">Hanging Man (Bearish Reversal / Uptrend)</option>
-                <option value="shooting_star">Shooting Star (Bearish Reversal / Uptrend)</option>
-                <option value="doji">Doji (Indecision / Equilibrium)</option>
-                <option value="spinning_top">Spinning Top (Indecision / Balanced Shadows)</option>
-                <option value="bullish_marubozu">Bullish Marubozu (Strong Momentum Up)</option>
-                <option value="bearish_marubozu">Bearish Marubozu (Strong Selling Down)</option>
+                <optgroup label="Single-Candle Patterns">
+                  <option value="hammer">{CANDLESTICK_PATTERN_LABELS.hammer} (Bullish Reversal / Downtrend)</option>
+                  <option value="inverted_hammer">{CANDLESTICK_PATTERN_LABELS.inverted_hammer} (Bullish Reversal / Downtrend)</option>
+                  <option value="hanging_man">{CANDLESTICK_PATTERN_LABELS.hanging_man} (Bearish Reversal / Uptrend)</option>
+                  <option value="shooting_star">{CANDLESTICK_PATTERN_LABELS.shooting_star} (Bearish Reversal / Uptrend)</option>
+                  <option value="doji">{CANDLESTICK_PATTERN_LABELS.doji} (Indecision / Equilibrium)</option>
+                  <option value="spinning_top">{CANDLESTICK_PATTERN_LABELS.spinning_top} (Indecision / Balanced Shadows)</option>
+                  <option value="bullish_marubozu">{CANDLESTICK_PATTERN_LABELS.bullish_marubozu} (Strong Momentum Up)</option>
+                  <option value="bearish_marubozu">{CANDLESTICK_PATTERN_LABELS.bearish_marubozu} (Strong Selling Down)</option>
+                </optgroup>
+                <optgroup label="Double-Candle Patterns">
+                  <option value="bullish_engulfing">{CANDLESTICK_PATTERN_LABELS.bullish_engulfing} (Bullish Reversal)</option>
+                  <option value="bearish_engulfing">{CANDLESTICK_PATTERN_LABELS.bearish_engulfing} (Bearish Reversal)</option>
+                  <option value="bullish_harami">{CANDLESTICK_PATTERN_LABELS.bullish_harami} (Bullish Inside Body)</option>
+                  <option value="bearish_harami">{CANDLESTICK_PATTERN_LABELS.bearish_harami} (Bearish Inside Body)</option>
+                  <option value="piercing_line">{CANDLESTICK_PATTERN_LABELS.piercing_line} (Bullish Piercing Recovery)</option>
+                  <option value="dark_cloud_cover">{CANDLESTICK_PATTERN_LABELS.dark_cloud_cover} (Bearish Dark Cloud)</option>
+                  <option value="tweezer_top">{CANDLESTICK_PATTERN_LABELS.tweezer_top} (Uptrend Reversal / Matching Highs)</option>
+                  <option value="tweezer_bottom">{CANDLESTICK_PATTERN_LABELS.tweezer_bottom} (Downtrend Reversal / Matching Lows)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -414,6 +426,14 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
               {config.candlestickPattern === 'bullish_marubozu' && 'Shape: close > open, body ≥ 95% range (little to no shadows)'}
               {config.candlestickPattern === 'bearish_marubozu' && 'Shape: close < open, body ≥ 95% range (little to no shadows)'}
               {config.candlestickPattern === 'spinning_top' && 'Shape: body 5-35% range, upper & lower shadows both ≥ body'}
+              {config.candlestickPattern === 'bullish_engulfing' && 'Shape: bearish candle 1, bullish candle 2 completely engulfs candle 1 body (open2 ≤ close1, close2 ≥ open1)'}
+              {config.candlestickPattern === 'bearish_engulfing' && 'Shape: bullish candle 1, bearish candle 2 completely engulfs candle 1 body (open2 ≥ close1, close2 ≤ open1)'}
+              {config.candlestickPattern === 'bullish_harami' && 'Shape: bearish candle 1, smaller bullish candle 2 completely contained inside candle 1 body'}
+              {config.candlestickPattern === 'bearish_harami' && 'Shape: bullish candle 1, smaller bearish candle 2 completely contained inside candle 1 body'}
+              {config.candlestickPattern === 'piercing_line' && 'Shape: bearish candle 1, bullish candle 2 opens < low1 and closes between midpoint and open of body 1'}
+              {config.candlestickPattern === 'dark_cloud_cover' && 'Shape: bullish candle 1, bearish candle 2 opens > high1 and closes between midpoint and open of body 1'}
+              {config.candlestickPattern === 'tweezer_top' && 'Shape: highs match within 0.1%, candle 1 bullish, candle 2 bearish, prior trend up'}
+              {config.candlestickPattern === 'tweezer_bottom' && 'Shape: lows match within 0.1%, candle 1 bearish, candle 2 bullish, prior trend down'}
             </div>
           </div>
 
