@@ -29,6 +29,7 @@ import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
 import { ProbabilityScoring } from './components/ProbabilityScoring';
 import { BacktestLab } from './components/BacktestLab';
+import { TradingJournal } from './components/TradingJournal';
 import { SchemaInspector } from './components/SchemaInspector';
 import {
   LayoutDashboard,
@@ -36,6 +37,7 @@ import {
   Layers,
   Sliders,
   Database,
+  BookOpen,
   AlertTriangle,
   RefreshCw,
   Clock,
@@ -253,6 +255,7 @@ export default function App() {
     { id: 'chart' as TabType, label: 'Chart', icon: TrendingUp },
     { id: 'lab' as TabType, label: 'Probability Lab', icon: Layers },
     { id: 'backtest' as TabType, label: 'Backtest', icon: Sliders },
+    { id: 'journal' as TabType, label: 'Journal', icon: BookOpen },
     { id: 'data' as TabType, label: 'Data Status', icon: Database },
   ];
 
@@ -548,7 +551,17 @@ export default function App() {
               </section>
             )}
 
-            {/* TAB 5: DATA STATUS (Live Schema Inspector) */}
+            {/* TAB 5: JOURNAL (Trading Journal) */}
+            {activeTab === 'journal' && (
+              <section id="journal-tab-content">
+                <TradingJournal
+                  companies={companies}
+                  selectedSymbol={selectedSymbol}
+                />
+              </section>
+            )}
+
+            {/* TAB 6: DATA STATUS (Live Schema Inspector) */}
             {activeTab === 'data' && (
               <section id="data-tab-content">
                 <SchemaInspector

@@ -61,7 +61,7 @@ export interface SetupScoreResult {
   occurrences: SetupOccurrence[];
 }
 
-export type TabType = 'dashboard' | 'chart' | 'lab' | 'backtest' | 'data';
+export type TabType = 'dashboard' | 'chart' | 'lab' | 'backtest' | 'journal' | 'data';
 
 export interface MarketIndexStatus {
   latestDate: string;
@@ -250,4 +250,51 @@ export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
   },
   candlestickPattern: 'hammer',
 };
+
+export type JournalStatus = 'open' | 'closed';
+
+export interface TradeJournalEntry {
+  id: string;
+  symbol: string;
+  entry_date: string;
+  entry_price: number;
+  exit_date: string | null;
+  exit_price: number | null;
+  stop_loss: number | null;
+  target_price: number | null;
+  position_size: number | null;
+  setup_type: string | null;
+  entry_reason: string;
+  lesson_learned: string | null;
+  status: JournalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateJournalEntryInput {
+  symbol: string;
+  entry_date: string;
+  entry_price: number;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  position_size?: number | null;
+  setup_type?: string | null;
+  entry_reason: string;
+  status?: JournalStatus;
+}
+
+export interface UpdateJournalEntryInput {
+  symbol?: string;
+  entry_date?: string;
+  entry_price?: number;
+  exit_date?: string | null;
+  exit_price?: number | null;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  position_size?: number | null;
+  setup_type?: string | null;
+  entry_reason?: string;
+  lesson_learned?: string | null;
+  status?: JournalStatus;
+}
 
