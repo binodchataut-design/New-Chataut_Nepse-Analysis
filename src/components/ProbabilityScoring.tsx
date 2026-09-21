@@ -18,6 +18,7 @@ import {
 } from '../lib/signalCombination';
 import { SignalFilterPanel } from './SignalFilterPanel';
 import { ConfiguredMarketScanner } from './ConfiguredMarketScanner';
+import { CautionNotice } from './CautionNotice';
 import {
   TrendingUp,
   RotateCcw,
@@ -678,25 +679,27 @@ const SetupCard: React.FC<SetupCardProps> = ({
 
             {/* Ultra-low Sample (<3) Honest Caveat */}
             {isUltraLowSampleSize ? (
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Too few occurrences to draw any conclusion:</span> Only{' '}
-                  <span className="font-bold">{totalOccurrences} occurrence{totalOccurrences === 1 ? '' : 's'}</span> exist in data.
-                  A hit rate ({hitRate !== null ? `${hitRate.toFixed(1)}%` : '—'}) calculated on {totalOccurrences} session{totalOccurrences === 1 ? '' : 's'} does not constitute reliable statistical evidence.
-                </div>
-              </div>
+              <CautionNotice
+                id="prob-scoring-ultra-low-sample-alert"
+                severity="critical"
+                title="Too few occurrences to draw any conclusion:"
+              >
+                Only{' '}
+                <span className="font-bold">{totalOccurrences} occurrence{totalOccurrences === 1 ? '' : 's'}</span> exist in data.
+                A hit rate ({hitRate !== null ? `${hitRate.toFixed(1)}%` : '—'}) calculated on {totalOccurrences} session{totalOccurrences === 1 ? '' : 's'} does not constitute reliable statistical evidence.
+              </CautionNotice>
             ) : isLowSampleSize ? (
               /* Standard Low Sample Size (<10) Caveat */
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Low sample size caveat:</span> Only{' '}
-                  <span className="font-bold">{totalOccurrences} occurrences</span> exist in the entire
-                  historical record for {symbol}. Treat this hit rate with caution — small samples cannot
-                  provide statistical significance.
-                </div>
-              </div>
+              <CautionNotice
+                id="prob-scoring-low-sample-alert"
+                severity="caution"
+                title="Low sample size caveat:"
+              >
+                Only{' '}
+                <span className="font-bold">{totalOccurrences} occurrences</span> exist in the entire
+                historical record for {symbol}. Treat this hit rate with caution — small samples cannot
+                provide statistical significance.
+              </CautionNotice>
             ) : null}
 
             {/* Note on Excluded Occurrences if any */}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { LiquidityMetrics } from '../types';
 import { Droplets, AlertTriangle, CheckCircle2, Info, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { CautionNotice } from './CautionNotice';
 
 interface LiquidityPanelProps {
   metrics: LiquidityMetrics | null;
@@ -69,13 +70,16 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
 
       {/* Prominent Warning Callout if Stale */}
       {metrics.isStale && (
-        <div className="px-4 py-2.5 bg-amber-100/70 border-b border-amber-200 flex items-start gap-2.5 text-xs text-amber-950">
-          <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <div className="leading-relaxed">
-            <strong className="font-semibold text-amber-900">Caution: Inactive Instrument.</strong> This stock last traded on{' '}
+        <div className="p-3 border-b border-neutral-200">
+          <CautionNotice
+            id="liquidity-stale-warning"
+            severity="caution"
+            title="Caution: Inactive Instrument."
+          >
+            This stock last traded on{' '}
             <span className="font-mono font-bold">{metrics.latestSessionDate}</span>, which is{' '}
             <span className="font-mono font-bold text-rose-800">{metrics.daysSinceLastTrade} market sessions</span> behind the latest market date ({metrics.marketLatestDate}). Signals on stale instruments carry severe execution risk.
-          </div>
+          </CautionNotice>
         </div>
       )}
 

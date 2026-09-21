@@ -18,6 +18,7 @@ import {
 } from '../lib/signalCombination';
 import { SignalFilterPanel } from './SignalFilterPanel';
 import { PositionSizeCalculator } from './PositionSizeCalculator';
+import { CautionNotice } from './CautionNotice';
 import {
   TrendingUp,
   Activity,
@@ -776,25 +777,27 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
 
             {/* Ultra-low Sample (<3) Honest Caveat */}
             {isUltraLowSampleSize ? (
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Too few trades to draw any conclusion:</span> Only{' '}
-                  <span className="font-bold">{totalTrades} trade{totalTrades === 1 ? '' : 's'}</span> simulated.
-                  A win rate ({winRate !== null ? `${winRate.toFixed(1)}%` : '—'}) based on {totalTrades} trade{totalTrades === 1 ? '' : 's'} does not provide statistical confidence.
-                </div>
-              </div>
+              <CautionNotice
+                id="backtest-ultra-low-sample-alert"
+                severity="critical"
+                title="Too few trades to draw any conclusion:"
+              >
+                Only{' '}
+                <span className="font-bold">{totalTrades} trade{totalTrades === 1 ? '' : 's'}</span> simulated.
+                A win rate ({winRate !== null ? `${winRate.toFixed(1)}%` : '—'}) based on {totalTrades} trade{totalTrades === 1 ? '' : 's'} does not provide statistical confidence.
+              </CautionNotice>
             ) : isLowSampleSize ? (
               /* Standard Low Sample Size (<10) Caveat */
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Low sample size caveat:</span> Only{' '}
-                  <span className="font-bold">{totalTrades} trades</span> occurred in the entire
-                  historical record for {symbol}. Small sample sizes are sensitive to market variance
-                  and cannot confirm statistical significance. Treat win rate and expectancy with caution.
-                </div>
-              </div>
+              <CautionNotice
+                id="backtest-low-sample-alert"
+                severity="caution"
+                title="Low sample size caveat:"
+              >
+                Only{' '}
+                <span className="font-bold">{totalTrades} trades</span> occurred in the entire
+                historical record for {symbol}. Small sample sizes are sensitive to market variance
+                and cannot confirm statistical significance. Treat win rate and expectancy with caution.
+              </CautionNotice>
             ) : null}
           </>
         )}

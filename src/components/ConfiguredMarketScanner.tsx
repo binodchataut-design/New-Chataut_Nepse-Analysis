@@ -6,6 +6,7 @@ import {
   SignalFilterConfig,
 } from '../types';
 import { scanConfiguredMarketSetup } from '../lib/marketScanner';
+import { CautionBadge } from './CautionNotice';
 import {
   Play,
   RefreshCw,
@@ -384,12 +385,10 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                         <div className="flex items-center gap-1.5">
                           <span>{m.symbol}</span>
                           {isLowSample && (
-                            <span
-                              className="text-[10px] px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded font-sans font-medium"
+                            <CautionBadge
+                              label="<10 samples"
                               title="Low sample count (<10 evaluated occurrences)"
-                            >
-                              &lt;10 samples
-                            </span>
+                            />
                           )}
                         </div>
                       </td>
@@ -447,16 +446,16 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                 {/* Visible Divider for Low Sample Occurrences (< minOccurrences) */}
                 {lowSampleMatches.length > 0 && (
                   <>
-                    <tr className="bg-amber-50/60 border-y border-amber-200 text-amber-900">
-                      <td colSpan={6} className="py-2 px-4 font-sans text-xs">
+                    <tr className="bg-amber-50/80 dark:bg-amber-950/40 border-y border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200">
+                      <td colSpan={6} className="py-2.5 px-4 font-sans text-xs">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-semibold text-amber-800">
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <div className="flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-100">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" strokeWidth={2} />
                             <span>
                               Low Historical Sample Size (&lt; {minOccurrences} occurrences) — Caution: Win rate has low statistical confidence
                             </span>
                           </div>
-                          <span className="font-mono text-[11px] text-amber-700">
+                          <span className="font-mono text-[11px] text-amber-800 dark:text-amber-300 font-semibold">
                             {lowSampleMatches.length} symbol{lowSampleMatches.length === 1 ? '' : 's'}
                           </span>
                         </div>
@@ -473,12 +472,10 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                         <td className="py-2.5 px-4 font-bold text-neutral-800">
                           <div className="flex items-center gap-1.5">
                             <span>{m.symbol}</span>
-                            <span
-                              className="text-[10px] px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded font-sans font-medium"
+                            <CautionBadge
+                              label={`<${minOccurrences} samples`}
                               title="Low sample count"
-                            >
-                              &lt;{minOccurrences} samples
-                            </span>
+                            />
                           </div>
                         </td>
                         <td className="py-2.5 px-3 text-neutral-600">{m.signalDate}</td>

@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  TrendingUp,
-  Layers,
+  LineChart,
+  Target,
   Sliders,
   BookOpen,
   Database,
@@ -19,7 +19,7 @@ import { ResolvedTheme } from './useThemeMode';
 export interface NavItemConfig {
   id: TabType;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
   description: string;
 }
 
@@ -33,13 +33,13 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
   {
     id: 'chart',
     label: 'Chart',
-    icon: TrendingUp,
+    icon: LineChart,
     description: 'Price Action & Indicators',
   },
   {
     id: 'lab',
     label: 'Probability Lab',
-    icon: Layers,
+    icon: Target,
     description: 'Setup Edge & Hit Rates',
   },
   {
@@ -179,6 +179,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 }`}
               >
                 <Icon
+                  strokeWidth={1.85}
                   className={`w-4 h-4 shrink-0 transition-colors ${
                     isActive
                       ? 'text-[var(--accent)]'
