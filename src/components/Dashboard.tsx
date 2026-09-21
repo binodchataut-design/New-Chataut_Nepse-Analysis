@@ -42,6 +42,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onRescan,
   onSelectSymbolAndNavigate,
 }) => {
+  const [showRuleNote, setShowRuleNote] = React.useState(false);
   const indexStatus = data?.indexStatus;
   const volumeTurnover = data?.volumeTurnover;
   const sectorStats = data?.sectorStats || [];
@@ -175,6 +176,152 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Market Regime Flag (Phase 16) */}
+                {indexStatus.regimeInfo && (
+                  <div
+                    id="market-regime-panel"
+                    className="mt-3.5 pt-3.5 border-t border-neutral-100 space-y-2.5"
+                  >
+                    {/* Header with Classification Badge */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                          Market Regime
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowRuleNote((prev) => !prev)}
+                          className="text-neutral-400 hover:text-neutral-600 transition-colors p-0.5 rounded cursor-pointer"
+                          title="Toggle transparent classification rule"
+                          aria-label="Toggle classification rule"
+                        >
+                          <Info className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <span
+                        id="market-regime-badge"
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                          indexStatus.regimeInfo.regime === 'Bullish'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : indexStatus.regimeInfo.regime === 'Bearish'
+                            ? 'bg-rose-50 text-rose-800 border-rose-200'
+                            : indexStatus.regimeInfo.regime === 'Neutral'
+                            ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
+                            : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            indexStatus.regimeInfo.regime === 'Bullish'
+                              ? 'bg-emerald-500'
+                              : indexStatus.regimeInfo.regime === 'Bearish'
+                              ? 'bg-rose-500'
+                              : indexStatus.regimeInfo.regime === 'Neutral'
+                              ? 'bg-neutral-500'
+                              : 'bg-amber-500'
+                          }`}
+                        />
+                        {indexStatus.regimeInfo.regime}
+                      </span>
+                    </div>
+
+                    {/* One-line Stat Row: Index Value, SMA50, SMA200, % distance from each */}
+                    <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-100 font-mono text-xs">
+                      <div className="grid grid-cols-3 gap-2 text-center divide-x divide-neutral-200/80">
+                        <div className="px-1">
+                          <div className="text-[9px] uppercase font-sans font-bold text-neutral-400">
+                            Index Close
+                          </div>
+                          <div className="font-bold text-neutral-900 mt-0.5">
+                            {indexStatus.regimeInfo.currentClose.toFixed(2)}
+                          </div>
+                        </div>
+
+                        <div className="px-1">
+                          <div className="text-[9px] uppercase font-sans font-bold text-neutral-400">
+                            SMA 50
+                          </div>
+                          <div className="font-bold text-neutral-800 mt-0.5">
+                            {indexStatus.regimeInfo.sma50 !== null
+                              ? indexStatus.regimeInfo.sma50.toFixed(2)
+                              : '—'}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 mt-0.5">
+                            {indexStatus.regimeInfo.distanceSMA50Pct !== null ? (
+                              <span
+                                className={
+                                  indexStatus.regimeInfo.distanceSMA50Pct >= 0
+                                    ? 'text-emerald-700 font-semibold'
+                                    : 'text-rose-700 font-semibold'
+                                }
+                              >
+                                {indexStatus.regimeInfo.distanceSMA50Pct >= 0 ? '+' : ''}
+                                {indexStatus.regimeInfo.distanceSMA50Pct.toFixed(2)}%
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="px-1">
+                          <div className="text-[9px] uppercase font-sans font-bold text-neutral-400">
+                            SMA 200
+                          </div>
+                          <div className="font-bold text-neutral-800 mt-0.5">
+                            {indexStatus.regimeInfo.sma200 !== null
+                              ? indexStatus.regimeInfo.sma200.toFixed(2)
+                              : '—'}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 mt-0.5">
+                            {indexStatus.regimeInfo.distanceSMA200Pct !== null ? (
+                              <span
+                                className={
+                                  indexStatus.regimeInfo.distanceSMA200Pct >= 0
+                                    ? 'text-emerald-700 font-semibold'
+                                    : 'text-rose-700 font-semibold'
+                                }
+                              >
+                                {indexStatus.regimeInfo.distanceSMA200Pct >= 0 ? '+' : ''}
+                                {indexStatus.regimeInfo.distanceSMA200Pct.toFixed(2)}%
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 text-[9px] font-sans font-medium">
+                                &lt;200 sessions
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Descriptive Framing Summary (Not a prediction) */}
+                    <div className="text-[11px] text-neutral-600 leading-relaxed font-sans">
+                      {indexStatus.regimeInfo.descriptiveSummary}
+                    </div>
+
+                    {/* Transparent Rule Note (Audit collapsible) */}
+                    {showRuleNote && (
+                      <div className="p-2.5 rounded-lg bg-neutral-100/80 border border-neutral-200 text-[11px] text-neutral-600 space-y-1 font-sans">
+                        <div className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                          <Info className="w-3.5 h-3.5 text-neutral-500" />
+                          <span>Exact Classification Rule</span>
+                        </div>
+                        <p className="text-[10.5px] text-neutral-600 leading-normal">
+                          <strong>Bullish:</strong> index above both 50 and 200-session averages, with 50 above 200.<br />
+                          <strong>Bearish:</strong> index below both 50 and 200-session averages, with 50 below 200.<br />
+                          <strong>Neutral:</strong> all other configurations (e.g. index above SMA50 but SMA50 below SMA200).<br />
+                          <strong>Insufficient History:</strong> fewer than 200 sessions recorded.
+                        </p>
+                        <p className="text-[9.5px] text-neutral-400 italic pt-0.5">
+                          Descriptive context only — no hidden weighting or predictions.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-6 text-center text-xs text-neutral-500 italic">

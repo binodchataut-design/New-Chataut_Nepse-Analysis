@@ -6,7 +6,7 @@ import { PriceRecord } from '../types';
  * For index i < period - 1, returns null (insufficient history).
  * For index i >= period - 1, returns the arithmetic mean of closes over [i - period + 1, i].
  */
-export function calculateSMA(data: PriceRecord[], period: number): (number | null)[] {
+export function calculateSMA(data: { close: number }[], period: number): (number | null)[] {
   if (!data || period <= 0) return [];
   const result: (number | null)[] = new Array(data.length).fill(null);
 

@@ -1,5 +1,6 @@
 import { getSupabaseClient, supabaseUrl, supabaseAnonKey } from './supabaseClient';
 import { MarketOverviewData, SectorStat } from '../types';
+import { classifyMarketRegime } from './marketRegime';
 
 export interface Company {
   symbol: string;
@@ -354,17 +355,48 @@ export async function getMarketOverview(): Promise<MarketOverviewData> {
 
   // 1. NEPSE Index Status from `market_index`
   try {
-    const { data: idxRows, error: idxErr } = await client
-      .from('market_index')
-      .select('date, close, change_percent, turnover')
-      .order('date', { ascending: false })
-      .limit(2);
+    const allIdxRows: Array<{
+      date: string;
+      close: number;
+      change_percent: number | null;
+      turnover: number | null;
+    }> = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (idxErr) {
-      result.indexError = `Error querying market_index: ${idxErr.message}`;
-    } else if (idxRows && idxRows.length > 0) {
-      const latest = idxRows[0];
-      const prev = idxRows.length > 1 ? idxRows[1] : null;
+    while (hasMore) {
+      const { data: pageData, error: pageErr } = await client
+        .from('market_index')
+        .select('date, close, change_percent, turnover')
+        .order('date', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (pageErr) {
+        throw new Error(`Error querying market_index: ${pageErr.message}`);
+      }
+      if (!pageData || pageData.length === 0) {
+        hasMore = false;
+      } else {
+        for (const r of pageData) {
+          allIdxRows.push({
+            date: String(r.date),
+            close: Number(r.close),
+            change_percent: r.change_percent !== null && r.change_percent !== undefined ? Number(r.change_percent) : null,
+            turnover: r.turnover !== null && r.turnover !== undefined ? Number(r.turnover) : null,
+          });
+        }
+        if (pageData.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      }
+    }
+
+    if (allIdxRows.length > 0) {
+      const latest = allIdxRows[allIdxRows.length - 1];
+      const prev = allIdxRows.length > 1 ? allIdxRows[allIdxRows.length - 2] : null;
       const latestClose = Number(latest.close);
       const prevClose = prev ? Number(prev.close) : null;
       const pointsChange = prevClose !== null ? Number((latestClose - prevClose).toFixed(2)) : null;
@@ -377,6 +409,8 @@ export async function getMarketOverview(): Promise<MarketOverviewData> {
           ? Number(latest.change_percent)
           : null;
 
+      const regimeInfo = classifyMarketRegime(allIdxRows);
+
       result.indexStatus = {
         latestDate: String(latest.date),
         latestClose,
@@ -385,12 +419,8 @@ export async function getMarketOverview(): Promise<MarketOverviewData> {
         pointsChange,
         percentChangeStored: storedPct,
         percentChangeCalculated: calculatedPct,
-        rawRows: idxRows.map((r) => ({
-          date: String(r.date),
-          close: Number(r.close),
-          change_percent: r.change_percent !== null ? Number(r.change_percent) : null,
-          turnover: r.turnover !== null ? Number(r.turnover) : null,
-        })),
+        regimeInfo,
+        rawRows: allIdxRows,
       };
     } else {
       result.indexError = 'No records found in market_index table.';

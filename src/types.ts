@@ -63,6 +63,21 @@ export interface SetupScoreResult {
 
 export type TabType = 'dashboard' | 'chart' | 'lab' | 'backtest' | 'journal' | 'data';
 
+export type MarketRegimeType = 'Bullish' | 'Neutral' | 'Bearish' | 'Insufficient History';
+
+export interface MarketRegimeInfo {
+  regime: MarketRegimeType;
+  currentClose: number;
+  sma50: number | null;
+  sma200: number | null;
+  distanceSMA50Pct: number | null;
+  distanceSMA200Pct: number | null;
+  sessionCount: number;
+  date: string;
+  ruleExplanation: string;
+  descriptiveSummary: string;
+}
+
 export interface MarketIndexStatus {
   latestDate: string;
   latestClose: number;
@@ -71,6 +86,7 @@ export interface MarketIndexStatus {
   pointsChange: number | null;
   percentChangeStored: number | null;
   percentChangeCalculated: number | null;
+  regimeInfo?: MarketRegimeInfo | null;
   rawRows: Array<{
     date: string;
     close: number;
