@@ -136,6 +136,33 @@ export interface MarketScanResult {
   scannedAt: string;
 }
 
+export interface ConfiguredSetupMatch {
+  symbol: string;
+  setupName: string;
+  signalDate: string;
+  sessionsAgo: number;
+  hitRate: number | null;
+  successCount: number;
+  totalOccurrences: number;
+  allOccurrencesCount: number;
+  avgForwardReturn: number | null;
+}
+
+export interface ConfiguredMarketScanResult {
+  matches: ConfiguredSetupMatch[];
+  totalCompanies: number;
+  scannedCount: number;
+  failedCount: number;
+  insufficientHistoryCount: number;
+  symbolsWithAnyOccurrenceCount: number;
+  isCombined: boolean;
+  setupDescription: string;
+  forwardSessions: number;
+  thresholdPercent: number;
+  durationMs: number;
+  scannedAt: string;
+}
+
 export type ExitReason = 'target' | 'stop' | 'expired';
 
 export interface BacktestTrade {

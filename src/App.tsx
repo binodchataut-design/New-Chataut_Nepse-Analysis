@@ -538,6 +538,7 @@ export default function App() {
                     symbol={selectedSymbol}
                     data={priceHistoryWithIndicators}
                     isLoading={isLoadingPrices}
+                    onSelectSymbolAndNavigate={handleSelectSymbolAndNavigate}
                   />
                 </div>
               </section>

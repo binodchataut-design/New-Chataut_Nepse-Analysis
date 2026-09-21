@@ -17,6 +17,7 @@ import {
   formatCombinationComparisonLine,
 } from '../lib/signalCombination';
 import { SignalFilterPanel } from './SignalFilterPanel';
+import { ConfiguredMarketScanner } from './ConfiguredMarketScanner';
 import {
   TrendingUp,
   RotateCcw,
@@ -37,12 +38,14 @@ interface ProbabilityScoringProps {
   symbol: string;
   data: PriceRecordWithIndicators[];
   isLoading: boolean;
+  onSelectSymbolAndNavigate?: (symbol: string) => void;
 }
 
 export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
   symbol,
   data,
   isLoading,
+  onSelectSymbolAndNavigate,
 }) => {
   // Configurable signal filter definition (MA Cross or RSI Threshold)
   const [filterConfig, setFilterConfig] = useState<SignalFilterConfig>(DEFAULT_SIGNAL_FILTER_CONFIG);
@@ -478,6 +481,21 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
           )}
         </div>
       </div>
+
+      {/* Phase 15: Market-Wide Ranking by Configurable Setup */}
+      <ConfiguredMarketScanner
+        conditionAConfig={isCombinedOpen ? conditionAConfig : filterConfig}
+        conditionBConfig={isCombinedOpen ? conditionBConfig : undefined}
+        isCombined={isCombinedOpen}
+        setupDescription={
+          isCombinedOpen
+            ? `${combinedEvaluation?.descA || 'Condition A'} AND ${combinedEvaluation?.descB || 'Condition B'}`
+            : setupTitle
+        }
+        forwardSessions={forwardSessions}
+        thresholdPercent={thresholdPercent}
+        onSelectSymbolAndNavigate={onSelectSymbolAndNavigate}
+      />
     </div>
   );
 };

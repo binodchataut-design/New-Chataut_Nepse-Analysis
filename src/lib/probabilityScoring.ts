@@ -215,7 +215,7 @@ export function detectRelativeVolumeSignals(
  * @param threshold Forward return threshold as percent (e.g. 2 for 2%) or fraction (0.02)
  */
 export function scoreSetup(
-  data: PriceRecordWithIndicators[],
+  data: PriceRecord[],
   signalIndices: number[],
   forwardSessions: number = 10,
   threshold: number = 2
