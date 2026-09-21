@@ -17,6 +17,7 @@ import {
   formatCombinationComparisonLine,
 } from '../lib/signalCombination';
 import { SignalFilterPanel } from './SignalFilterPanel';
+import { PositionSizeCalculator } from './PositionSizeCalculator';
 import {
   TrendingUp,
   Activity,
@@ -198,6 +199,17 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
     setMaxHoldingSessions(20);
   };
 
+  // Phase 17: Auto-fill hypothetical entry and stop from latest close and configured stop %
+  const latestClose = useMemo(() => {
+    if (!data || data.length === 0) return 0;
+    return Number(data[data.length - 1].close) || 0;
+  }, [data]);
+
+  const calculatedStopPrice = useMemo(() => {
+    if (latestClose <= 0) return 0;
+    return Number((latestClose * (1 - stopPct / 100)).toFixed(2));
+  }, [latestClose, stopPct]);
+
   if (isLoading) {
     return (
       <div className="w-full bg-white border border-neutral-200 rounded-xl p-6 text-center text-neutral-500">
@@ -308,6 +320,18 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Phase 17: Position Size Calculator (Near Target/Stop Inputs) */}
+      <PositionSizeCalculator
+        mode="backtest"
+        symbol={symbol}
+        entryPrice={latestClose}
+        stopLossPrice={calculatedStopPrice}
+        onSyncBacktestValues={() => ({
+          entry: latestClose,
+          stop: calculatedStopPrice,
+        })}
+      />
 
       {/* Signal Filter Definition Panel */}
       <SignalFilterPanel

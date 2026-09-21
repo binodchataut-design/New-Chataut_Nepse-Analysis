@@ -14,8 +14,10 @@ import {
   Target,
   ShieldAlert,
   HelpCircle,
+  Calculator,
+  ChevronDown,
 } from 'lucide-react';
-import { Company, TradeJournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput } from '../types';
+import { Company, TradeJournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput, LiquidityMetrics } from '../types';
 import {
   getJournalEntries,
   createJournalEntry,
@@ -27,7 +29,10 @@ import {
   calculateHoldingDays,
   computeJournalSummary,
 } from '../lib/journalService';
+import { getPriceHistory } from '../lib/dataService';
+import { computeLiquidityMetrics, getMarketTradingDates } from '../lib/liquidityService';
 import { SymbolPicker } from './SymbolPicker';
+import { PositionSizeCalculator } from './PositionSizeCalculator';
 
 interface TradingJournalProps {
   companies: Company[];
@@ -56,6 +61,11 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
   const [formPositionSize, setFormPositionSize] = useState<string>('');
   const [formSetupType, setFormSetupType] = useState<string>('');
   const [formEntryReason, setFormEntryReason] = useState<string>('');
+
+  // Phase 17: Position Size Calculator & Pre-Trade Risk Checks State
+  const [showCalculator, setShowCalculator] = useState<boolean>(true);
+  const [formLiquidity, setFormLiquidity] = useState<LiquidityMetrics | null>(null);
+  const [isLoadingLiquidity, setIsLoadingLiquidity] = useState<boolean>(false);
 
   // Close Trade Modal State
   const [closingEntry, setClosingEntry] = useState<TradeJournalEntry | null>(null);
@@ -97,6 +107,36 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
       setFormSymbol(selectedSymbol);
     }
   }, [selectedSymbol, formSymbol]);
+
+  // Phase 17: Fetch Phase 13 LiquidityMetrics whenever formSymbol changes
+  useEffect(() => {
+    const sym = (formSymbol || selectedSymbol || '').trim().toUpperCase();
+    if (!sym) {
+      setFormLiquidity(null);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingLiquidity(true);
+
+    (async () => {
+      try {
+        const dates = await getMarketTradingDates();
+        const prices = await getPriceHistory(sym);
+        if (!active) return;
+        const metrics = computeLiquidityMetrics(sym, prices, dates);
+        setFormLiquidity(metrics);
+      } catch {
+        if (active) setFormLiquidity(null);
+      } finally {
+        if (active) setIsLoadingLiquidity(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [formSymbol, selectedSymbol]);
 
   // Summary Metrics
   const summary = useMemo(() => computeJournalSummary(entries), [entries]);
@@ -561,6 +601,43 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                   className="w-full px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-900 focus:outline-hidden"
                 />
               </div>
+            </div>
+
+            {/* Phase 17: Position Size Calculator & Pre-Trade Risk Checks (Collapsible/Optional) */}
+            <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50/50">
+              <button
+                type="button"
+                id="toggle-journal-risk-calculator"
+                onClick={() => setShowCalculator((prev) => !prev)}
+                className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-neutral-700" />
+                  <span>Position Size Calculator &amp; Pre-Trade Risk Checks (Optional)</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 font-medium">
+                  <span>{showCalculator ? 'Collapse Calculator' : 'Expand Calculator'}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${showCalculator ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </button>
+
+              {showCalculator && (
+                <div className="p-3.5 border-t border-neutral-200 bg-white">
+                  <PositionSizeCalculator
+                    mode="journal"
+                    symbol={formSymbol || selectedSymbol}
+                    controlledEntryPrice={formEntryPrice}
+                    controlledStopLossPrice={formStopLoss}
+                    controlledShares={formPositionSize}
+                    onApplyShares={(shares) => setFormPositionSize(shares.toString())}
+                    openPositions={openPositions}
+                    liquidityMetrics={formLiquidity}
+                    isLiquidityLoading={isLoadingLiquidity}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Entry Reason */}

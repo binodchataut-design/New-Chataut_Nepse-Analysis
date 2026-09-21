@@ -369,3 +369,41 @@ export interface LiquidityMetrics {
   tradeCountNote: string;
 }
 
+// Phase 17: Risk Controls & Position Sizing
+export interface PositionSizeResult {
+  accountSize: number;
+  riskPerTradePct: number;
+  entryPrice: number;
+  stopLossPrice: number;
+  riskAmount: number;
+  riskPerShare: number;
+  shares: number;
+  positionValue: number;
+  positionPctOfAccount: number;
+  isValid: boolean;
+  errorMessage?: string;
+}
+
+export interface ConcentrationCheck {
+  accountSize: number;
+  newPositionValue: number;
+  existingOpenExposure: number;
+  totalExposure: number;
+  totalExposurePct: number;
+  openPositionsCount: number;
+  sameSymbolCount: number;
+  isHighExposure: boolean;
+  hasSameSymbol: boolean;
+  explanation: string;
+}
+
+export interface LiquidityFeasibilityCheck {
+  shares: number;
+  symbol: string;
+  avgVolume20: number | null;
+  positionAsPctOfDailyVolume: number | null;
+  hasSufficientHistory: boolean;
+  isHighVolumePct: boolean;
+  message: string;
+}
+
