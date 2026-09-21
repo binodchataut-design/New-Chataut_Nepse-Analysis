@@ -24,9 +24,11 @@ import {
   MarketScanProgress,
 } from './types';
 import { scanMarketSetups } from './lib/marketScanner';
+import { computeLiquidityMetrics, getMarketTradingDates } from './lib/liquidityService';
 import { Dashboard } from './components/Dashboard';
 import { SymbolPicker } from './components/SymbolPicker';
 import { PriceChart } from './components/PriceChart';
+import { LiquidityPanel } from './components/LiquidityPanel';
 import { ProbabilityScoring } from './components/ProbabilityScoring';
 import { BacktestLab } from './components/BacktestLab';
 import { TradingJournal } from './components/TradingJournal';
@@ -72,6 +74,9 @@ export default function App() {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanProgress, setScanProgress] = useState<MarketScanProgress | null>(null);
 
+  // Market Trading Dates for Liquidity calculations (Phase 13)
+  const [marketTradingDates, setMarketTradingDates] = useState<string[]>([]);
+
   // 1. Initial Load: Schema introspection & Companies list
   const initializeData = useCallback(async () => {
     if (!configStatus.isConfigured) return;
@@ -86,6 +91,11 @@ export default function App() {
     } finally {
       setIsInspectingSchema(false);
     }
+
+    // Fetch market trading dates for liquidity days-since-last-trade computation
+    getMarketTradingDates()
+      .then((dates) => setMarketTradingDates(dates))
+      .catch((err) => console.warn('Failed to load market trading dates:', err));
 
     // Fetch companies
     setIsLoadingCompanies(true);
@@ -249,6 +259,12 @@ export default function App() {
       hasEnoughRvolHistory,
     };
   }, [priceHistoryWithIndicators, filteredPrices]);
+
+  // Phase 13: Liquidity Metrics computed for the currently selected symbol
+  const liquidityMetrics = useMemo(() => {
+    if (!selectedSymbol || !priceHistory || priceHistory.length === 0) return null;
+    return computeLiquidityMetrics(selectedSymbol, priceHistory, marketTradingDates);
+  }, [selectedSymbol, priceHistory, marketTradingDates]);
 
   const navTabs = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
@@ -478,6 +494,12 @@ export default function App() {
                     </button>
                   )}
                 </div>
+
+                {/* Liquidity Profile Panel (Phase 13) */}
+                <LiquidityPanel
+                  metrics={liquidityMetrics}
+                  isLoading={isLoadingPrices}
+                />
 
                 {/* Price Chart */}
                 <div id="chart-section">

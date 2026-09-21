@@ -298,3 +298,23 @@ export interface UpdateJournalEntryInput {
   status?: JournalStatus;
 }
 
+export interface LiquidityMetrics {
+  symbol: string;
+  totalSessions: number;
+  latestSessionDate: string | null;
+  marketLatestDate: string | null;
+  daysSinceLastTrade: number | null;
+  isStale: boolean; // daysSinceLastTrade !== null && daysSinceLastTrade > 5
+  has20SessionHistory: boolean;
+  avgVolume20: number | null;
+  has60SessionHistory: boolean;
+  avgVolume60: number | null;
+  liquidityTrendRatio: number | null;
+  liquidityTrendDescription: string;
+  liquidityTrendDirection: 'rising' | 'fading' | 'neutral' | 'insufficient';
+  hasTradeCountColumn: boolean;
+  tradeCount20: number | null;
+  tradeCount60: number | null;
+  tradeCountNote: string;
+}
+

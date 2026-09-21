@@ -216,32 +216,49 @@ export async function getPriceHistory(
     cols.find((c) => ['date', 'business_date', 'published_date', 'as_of_date'].includes(c.toLowerCase())) ||
     'date';
 
-  let query = client
-    .from('daily_prices')
-    .select('*')
-    .eq(symbolColumn, trimmedSymbol);
+  let allRows: Record<string, unknown>[] = [];
+  let fromIdx = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (from) {
-    query = query.gte(dateColumn, from);
+  while (hasMore) {
+    let pagedQuery = client
+      .from('daily_prices')
+      .select('*')
+      .eq(symbolColumn, trimmedSymbol);
+
+    if (from) {
+      pagedQuery = pagedQuery.gte(dateColumn, from);
+    }
+    if (to) {
+      pagedQuery = pagedQuery.lte(dateColumn, to);
+    }
+
+    pagedQuery = pagedQuery.order(dateColumn, { ascending: true }).range(fromIdx, fromIdx + pageSize - 1);
+
+    const { data: pageData, error } = await pagedQuery;
+
+    if (error) {
+      throw new Error(`Failed to fetch daily prices for ${trimmedSymbol}: ${error.message}`);
+    }
+
+    if (!pageData || pageData.length === 0) {
+      hasMore = false;
+    } else {
+      allRows.push(...pageData);
+      if (pageData.length < pageSize) {
+        hasMore = false;
+      } else {
+        fromIdx += pageSize;
+      }
+    }
   }
-  if (to) {
-    query = query.lte(dateColumn, to);
-  }
 
-  // Order ascending by date to form a valid chronological chart series
-  query = query.order(dateColumn, { ascending: true }).limit(5000);
-
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(`Failed to fetch daily prices for ${trimmedSymbol}: ${error.message}`);
-  }
-
-  if (!data || data.length === 0) {
+  if (allRows.length === 0) {
     return [];
   }
 
-  const records: PriceRecord[] = data.map((row: Record<string, unknown>) => {
+  const records: PriceRecord[] = allRows.map((row: Record<string, unknown>) => {
     const rawDate = String(
       row.date ??
       row.business_date ??
