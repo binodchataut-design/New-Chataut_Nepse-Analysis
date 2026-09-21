@@ -1,1 +1,374 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-elevated: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --accent: #0f172a;
+    --accent-hover: #1e293b;
+    --accent-text: #ffffff;
+    --accent-blue: #2563eb;
+    --accent-blue-subtle: #eff6ff;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+  }
+
+  /* Default to dark mode if system prefers dark and user has no manual override */
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1a2234;
+      --bg-elevated: #162032;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border: #26324a;
+      --border-subtle: #1b2537;
+      --accent: #f8fafc;
+      --accent-hover: #e2e8f0;
+      --accent-text: #0a0e17;
+      --accent-blue: #3b82f6;
+      --accent-blue-subtle: #172554;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+  }
+
+  /* Explicit user manual override: Dark */
+  .dark {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-tertiary: #1a2234;
+    --bg-elevated: #162032;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border: #26324a;
+    --border-subtle: #1b2537;
+    --accent: #f8fafc;
+    --accent-hover: #e2e8f0;
+    --accent-text: #0a0e17;
+    --accent-blue: #3b82f6;
+    --accent-blue-subtle: #172554;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+
+  /* Explicit user manual override: Light */
+  .light {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-elevated: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --accent: #0f172a;
+    --accent-hover: #1e293b;
+    --accent-text: #ffffff;
+    --accent-blue: #2563eb;
+    --accent-blue-subtle: #eff6ff;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+  }
+
+  html, body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+/* ==========================================================================
+   Comprehensive Dark Mode Semantic Mapping
+   Applies to every existing section, table, card, modal, and control
+   ========================================================================== */
+
+/* Background surfaces */
+html.dark .bg-white {
+  background-color: var(--bg-secondary) !important;
+}
+html.dark .bg-neutral-50 {
+  background-color: var(--bg-tertiary) !important;
+}
+html.dark .bg-neutral-100 {
+  background-color: var(--bg-tertiary) !important;
+}
+html.dark .bg-neutral-200 {
+  background-color: var(--border) !important;
+}
+
+/* High contrast primary actions / buttons */
+html.dark button.bg-neutral-900 {
+  background-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+html.dark button.bg-neutral-900:hover {
+  background-color: var(--accent-hover) !important;
+}
+
+/* Typography tokens */
+html.dark .text-neutral-900 {
+  color: var(--text-primary) !important;
+}
+html.dark .text-neutral-800 {
+  color: var(--text-primary) !important;
+}
+html.dark .text-neutral-700 {
+  color: var(--text-secondary) !important;
+}
+html.dark .text-neutral-600 {
+  color: var(--text-secondary) !important;
+}
+html.dark .text-neutral-500 {
+  color: var(--text-muted) !important;
+}
+html.dark .text-neutral-400 {
+  color: var(--text-muted) !important;
+}
+
+/* Borders & Dividers */
+html.dark .border-neutral-200,
+html.dark .border-neutral-300 {
+  border-color: var(--border) !important;
+}
+html.dark .border-neutral-100 {
+  border-color: var(--border-subtle) !important;
+}
+html.dark .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border) !important;
+}
+html.dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Form Inputs, Dropdowns, and Textareas */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+html.dark select option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Semantic Status Badges & Notices */
+html.dark .bg-emerald-50 {
+  background-color: #052e16 !important;
+}
+html.dark .border-emerald-200 {
+  border-color: #166534 !important;
+}
+html.dark .text-emerald-700,
+html.dark .text-emerald-800 {
+  color: #4ade80 !important;
+}
+
+html.dark .bg-rose-50 {
+  background-color: #450a0a !important;
+}
+html.dark .border-rose-200 {
+  border-color: #991b1b !important;
+}
+html.dark .text-rose-700,
+html.dark .text-rose-800 {
+  color: #f87171 !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: #451a03 !important;
+}
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+  border-color: #92400e !important;
+}
+html.dark .text-amber-700,
+html.dark .text-amber-800,
+html.dark .text-amber-900 {
+  color: #fbbf24 !important;
+}
+
+html.dark .bg-indigo-50 {
+  background-color: #1e1b4b !important;
+}
+html.dark .border-indigo-200 {
+  border-color: #3730a3 !important;
+}
+html.dark .text-indigo-700,
+html.dark .text-indigo-800 {
+  color: #818cf8 !important;
+}
+
+html.dark .bg-purple-50 {
+  background-color: #3b0764 !important;
+}
+html.dark .border-purple-200 {
+  border-color: #6b21a8 !important;
+}
+html.dark .text-purple-700,
+html.dark .text-purple-800 {
+  color: #c084fc !important;
+}
+
+/* Tables & Hover States */
+html.dark tr:hover {
+  background-color: rgba(255, 255, 255, 0.035) !important;
+}
+html.dark thead {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* Recharts in Dark Mode */
+html.dark .recharts-cartesian-grid line {
+  stroke: var(--border-subtle) !important;
+}
+html.dark .recharts-text {
+  fill: var(--text-muted) !important;
+}
+
+/* System prefers-color-scheme dark rules (when no manual override .light exists) */
+@media (prefers-color-scheme: dark) {
+  html:not(.light) .bg-white {
+    background-color: var(--bg-secondary) !important;
+  }
+  html:not(.light) .bg-neutral-50 {
+    background-color: var(--bg-tertiary) !important;
+  }
+  html:not(.light) .bg-neutral-100 {
+    background-color: var(--bg-tertiary) !important;
+  }
+  html:not(.light) .bg-neutral-200 {
+    background-color: var(--border) !important;
+  }
+  html:not(.light) button.bg-neutral-900 {
+    background-color: var(--accent) !important;
+    color: var(--accent-text) !important;
+  }
+  html:not(.light) button.bg-neutral-900:hover {
+    background-color: var(--accent-hover) !important;
+  }
+  html:not(.light) .text-neutral-900,
+  html:not(.light) .text-neutral-800 {
+    color: var(--text-primary) !important;
+  }
+  html:not(.light) .text-neutral-700,
+  html:not(.light) .text-neutral-600 {
+    color: var(--text-secondary) !important;
+  }
+  html:not(.light) .text-neutral-500,
+  html:not(.light) .text-neutral-400 {
+    color: var(--text-muted) !important;
+  }
+  html:not(.light) .border-neutral-200,
+  html:not(.light) .border-neutral-300 {
+    border-color: var(--border) !important;
+  }
+  html:not(.light) .border-neutral-100 {
+    border-color: var(--border-subtle) !important;
+  }
+  html:not(.light) .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border) !important;
+  }
+  html:not(.light) .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-subtle) !important;
+  }
+  html:not(.light) input,
+  html:not(.light) select,
+  html:not(.light) textarea {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+  }
+  html:not(.light) input::placeholder,
+  html:not(.light) textarea::placeholder {
+    color: var(--text-muted) !important;
+  }
+  html:not(.light) select option {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+  html:not(.light) .bg-emerald-50 {
+    background-color: #052e16 !important;
+  }
+  html:not(.light) .border-emerald-200 {
+    border-color: #166534 !important;
+  }
+  html:not(.light) .text-emerald-700,
+  html:not(.light) .text-emerald-800 {
+    color: #4ade80 !important;
+  }
+  html:not(.light) .bg-rose-50 {
+    background-color: #450a0a !important;
+  }
+  html:not(.light) .border-rose-200 {
+    border-color: #991b1b !important;
+  }
+  html:not(.light) .text-rose-700,
+  html:not(.light) .text-rose-800 {
+    color: #f87171 !important;
+  }
+  html:not(.light) .bg-amber-50 {
+    background-color: #451a03 !important;
+  }
+  html:not(.light) .border-amber-200,
+  html:not(.light) .border-amber-300 {
+    border-color: #92400e !important;
+  }
+  html:not(.light) .text-amber-700,
+  html:not(.light) .text-amber-800,
+  html:not(.light) .text-amber-900 {
+    color: #fbbf24 !important;
+  }
+  html:not(.light) .bg-indigo-50 {
+    background-color: #1e1b4b !important;
+  }
+  html:not(.light) .border-indigo-200 {
+    border-color: #3730a3 !important;
+  }
+  html:not(.light) .text-indigo-700,
+  html:not(.light) .text-indigo-800 {
+    color: #818cf8 !important;
+  }
+  html:not(.light) .bg-purple-50 {
+    background-color: #3b0764 !important;
+  }
+  html:not(.light) .border-purple-200 {
+    border-color: #6b21a8 !important;
+  }
+  html:not(.light) .text-purple-700,
+  html:not(.light) .text-purple-800 {
+    color: #c084fc !important;
+  }
+  html:not(.light) tr:hover {
+    background-color: rgba(255, 255, 255, 0.035) !important;
+  }
+  html:not(.light) thead {
+    background-color: var(--bg-tertiary) !important;
+  }
+  html:not(.light) .recharts-cartesian-grid line {
+    stroke: var(--border-subtle) !important;
+  }
+  html:not(.light) .recharts-text {
+    fill: var(--text-muted) !important;
+  }
+}

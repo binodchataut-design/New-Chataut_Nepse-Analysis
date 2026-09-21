@@ -33,13 +33,10 @@ import { ProbabilityScoring } from './components/ProbabilityScoring';
 import { BacktestLab } from './components/BacktestLab';
 import { TradingJournal } from './components/TradingJournal';
 import { SchemaInspector } from './components/SchemaInspector';
+import { AppSidebar, SIDEBAR_NAV_ITEMS } from './components/AppSidebar';
+import { useThemeMode } from './components/useThemeMode';
 import {
-  LayoutDashboard,
-  TrendingUp,
-  Layers,
-  Sliders,
-  Database,
-  BookOpen,
+  Menu,
   AlertTriangle,
   RefreshCw,
   Clock,
@@ -50,6 +47,16 @@ export default function App() {
 
   // Plain Tab Navigation State (default is 'dashboard')
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+
+  // Theme & Sidebar Navigation State (Phase 18)
+  const { theme, hasOverride, toggleTheme, resetToSystem } = useThemeMode();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
+
+  const currentNav = useMemo(
+    () => SIDEBAR_NAV_ITEMS.find((item) => item.id === activeTab) || SIDEBAR_NAV_ITEMS[0],
+    [activeTab]
+  );
 
   // Application State
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -266,121 +273,114 @@ export default function App() {
     return computeLiquidityMetrics(selectedSymbol, priceHistory, marketTradingDates);
   }, [selectedSymbol, priceHistory, marketTradingDates]);
 
-  const navTabs = [
-    { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'chart' as TabType, label: 'Chart', icon: TrendingUp },
-    { id: 'lab' as TabType, label: 'Probability Lab', icon: Layers },
-    { id: 'backtest' as TabType, label: 'Backtest', icon: Sliders },
-    { id: 'journal' as TabType, label: 'Journal', icon: BookOpen },
-    { id: 'data' as TabType, label: 'Data Status', icon: Database },
-  ];
-
   return (
-    <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans antialiased">
-      {/* Top Application Bar */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-mono font-bold text-sm shadow-xs">
-              NP
-            </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-neutral-900 leading-tight">
-                NEPSE Research
-              </h1>
-              <p className="text-[11px] text-neutral-500 font-medium">
-                Decision-Support &amp; Historical Price Analysis
-              </p>
-            </div>
-          </div>
+    <div className="flex min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased">
+      {/* Left Sidebar Navigation (Phase 18) */}
+      <AppSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
+        theme={theme}
+        hasThemeOverride={hasOverride}
+        onToggleTheme={toggleTheme}
+        onResetThemeToSystem={resetToSystem}
+        isLiveConfigured={configStatus.isConfigured}
+      />
 
-          {/* Connection State Badge */}
-          <div className="flex items-center gap-2">
-            {configStatus.isConfigured ? (
-              <div
-                id="supabase-connection-badge"
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-xs font-mono font-medium"
-                title={`Connected to ${configStatus.url}`}
+      {/* Main Workspace Column */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Top Header Bar */}
+        <header className="bg-[var(--bg-secondary)] border-b border-[var(--border)] sticky top-0 z-20 shadow-2xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {/* Mobile Hamburger Drawer Trigger */}
+              <button
+                type="button"
+                id="mobile-sidebar-toggle"
+                onClick={() => setIsMobileNavOpen(true)}
+                className="md:hidden p-2 -ml-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+                aria-label="Open sidebar navigation"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Supabase Live</span>
-              </div>
-            ) : (
-              <div
-                id="supabase-connection-badge"
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded-full text-xs font-mono font-medium"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                <span>Not Connected</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+                <Menu className="w-5 h-5" />
+              </button>
 
-      {/* Main Container */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        {/* Unconfigured Honest State */}
-        {!configStatus.isConfigured && (
-          <section
-            id="not-connected-banner"
-            className="p-6 bg-white border border-amber-200 rounded-xl shadow-xs space-y-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg text-amber-800 shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div className="space-y-1.5">
-                <h2 className="text-base font-bold text-neutral-900">
-                  Supabase Credentials Required
-                </h2>
-                <p className="text-sm text-neutral-600 leading-relaxed">
-                  This application requires direct connection to your existing Supabase project containing NEPSE historical data.
-                  No fake mock data is provided.
-                </p>
-                <p className="text-xs font-mono text-rose-700 bg-rose-50 p-2.5 rounded-md border border-rose-200">
-                  {configStatus.error}
+              <div>
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-[var(--text-primary)] leading-tight">
+                  {currentNav.label}
+                </h1>
+                <p className="text-[11px] text-[var(--text-muted)] hidden sm:block">
+                  {currentNav.description}
                 </p>
               </div>
             </div>
 
-            <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200 text-xs text-neutral-700 space-y-2">
-              <div className="font-semibold text-neutral-900">How to connect:</div>
-              <ol className="list-decimal list-inside space-y-1 text-neutral-600">
-                <li>Open Settings &gt; Secrets in Google AI Studio.</li>
-                <li>Add <code className="bg-neutral-200 px-1 py-0.5 rounded font-mono text-neutral-900">VITE_SUPABASE_URL</code> with your project URL (e.g. <code className="text-neutral-500">https://xyz.supabase.co</code>).</li>
-                <li>Add <code className="bg-neutral-200 px-1 py-0.5 rounded font-mono text-neutral-900">VITE_SUPABASE_ANON_KEY</code> with your project anon public key.</li>
-              </ol>
+            {/* Supabase Connection State Badge */}
+            <div className="flex items-center gap-2">
+              {configStatus.isConfigured ? (
+                <div
+                  id="supabase-connection-badge"
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-xs font-mono font-medium"
+                  title={`Connected to ${configStatus.url}`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Supabase Live</span>
+                </div>
+              ) : (
+                <div
+                  id="supabase-connection-badge"
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded-full text-xs font-mono font-medium"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Not Connected</span>
+                </div>
+              )}
             </div>
-          </section>
-        )}
+          </div>
+        </header>
 
-        {/* Live App Controls (When Configured) */}
-        {configStatus.isConfigured && (
-          <>
-            {/* Plain 5-Tab Navigation Bar */}
-            <nav id="app-tabs-nav" className="flex items-center gap-1.5 border-b border-neutral-200 pb-0 overflow-x-auto">
-              {navTabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    id={`tab-${tab.id}`}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg transition-all border-b-2 whitespace-nowrap ${
-                      isActive
-                        ? 'border-neutral-900 text-neutral-900 bg-white shadow-2xs'
-                        : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/70'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+        {/* Main View Container */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5">
+          {/* Unconfigured Honest State */}
+          {!configStatus.isConfigured && (
+            <section
+              id="not-connected-banner"
+              className="p-6 bg-[var(--bg-secondary)] border border-amber-200 rounded-xl shadow-xs space-y-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg text-amber-800 shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-base font-bold text-[var(--text-primary)]">
+                    Supabase Credentials Required
+                  </h2>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                    This application requires direct connection to your existing Supabase project containing NEPSE historical data.
+                    No fake mock data is provided.
+                  </p>
+                  <p className="text-xs font-mono text-rose-700 bg-rose-50 p-2.5 rounded-md border border-rose-200">
+                    {configStatus.error}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] space-y-2">
+                <div className="font-semibold text-[var(--text-primary)]">How to connect:</div>
+                <ol className="list-decimal list-inside space-y-1 text-[var(--text-muted)]">
+                  <li>Open Settings &gt; Secrets in Google AI Studio.</li>
+                  <li>Add <code className="bg-[var(--border)] px-1 py-0.5 rounded font-mono text-[var(--text-primary)]">VITE_SUPABASE_URL</code> with your project URL (e.g. <code className="text-[var(--text-muted)]">https://xyz.supabase.co</code>).</li>
+                  <li>Add <code className="bg-[var(--border)] px-1 py-0.5 rounded font-mono text-[var(--text-primary)]">VITE_SUPABASE_ANON_KEY</code> with your project anon public key.</li>
+                </ol>
+              </div>
+            </section>
+          )}
+
+          {/* Live App Controls (When Configured) */}
+          {configStatus.isConfigured && (
+            <>
 
             {/* TAB 1: DASHBOARD (Market Overview & Scanner) */}
             {activeTab === 'dashboard' && (
@@ -596,7 +596,8 @@ export default function App() {
             )}
           </>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
