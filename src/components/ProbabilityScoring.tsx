@@ -11,6 +11,11 @@ import {
   computeSignalsFromConfig,
   getSignalSetupDescription,
 } from '../lib/probabilityScoring';
+import {
+  combineSignalsAND,
+  getUnionSessionCount,
+  formatCombinationComparisonLine,
+} from '../lib/signalCombination';
 import { SignalFilterPanel } from './SignalFilterPanel';
 import {
   TrendingUp,
@@ -23,6 +28,9 @@ import {
   Layers,
   Activity,
   CandlestickChart,
+  BarChart3,
+  ChevronDown,
+  GitMerge,
 } from 'lucide-react';
 
 interface ProbabilityScoringProps {
@@ -42,6 +50,15 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
   // Configurable forward window and threshold with defaults 10 sessions / 2%
   const [forwardSessions, setForwardSessions] = useState<number>(10);
   const [thresholdPercent, setThresholdPercent] = useState<number>(2.0);
+
+  // Phase 14: Combine Signals state (default collapsed, Condition A & Condition B)
+  const [isCombinedOpen, setIsCombinedOpen] = useState<boolean>(false);
+  const [conditionAConfig, setConditionAConfig] = useState<SignalFilterConfig>(DEFAULT_SIGNAL_FILTER_CONFIG);
+  const [conditionBConfig, setConditionBConfig] = useState<SignalFilterConfig>({
+    ...DEFAULT_SIGNAL_FILTER_CONFIG,
+    mode: 'relative_volume',
+    relativeVolume: { threshold: 1.5 },
+  });
 
   // Compute signals from config and score the setup dynamically
   const { scoreResult, signalCount, setupTitle, setupFormula, setupCategory } = useMemo(() => {
@@ -64,6 +81,8 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
         ? 'Trend-Following Setup'
         : filterConfig.mode === 'rsi_threshold'
         ? 'Mean-Reversion Setup'
+        : filterConfig.mode === 'relative_volume'
+        ? 'Volume-Expansion Setup'
         : 'Candlestick Pattern Setup';
 
     const formula =
@@ -71,6 +90,8 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
         ? `${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i-1] <= ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i-1] AND ${filterConfig.maCross.fastType.toLowerCase()}${filterConfig.maCross.fastPeriod}[i] > ${filterConfig.maCross.slowType.toLowerCase()}${filterConfig.maCross.slowPeriod}[i]`
         : filterConfig.mode === 'rsi_threshold'
         ? `rsi${filterConfig.rsiThreshold.period}[i-1] ${filterConfig.rsiThreshold.direction === 'recovery' ? '<' : '>'} ${filterConfig.rsiThreshold.threshold} AND rsi${filterConfig.rsiThreshold.period}[i] ${filterConfig.rsiThreshold.direction === 'recovery' ? '>=' : '<='} ${filterConfig.rsiThreshold.threshold}`
+        : filterConfig.mode === 'relative_volume'
+        ? `volume[i] >= ${(filterConfig.relativeVolume?.threshold ?? 1.5).toFixed(1)}x of 20-session average volume`
         : `${CANDLESTICK_PATTERN_LABELS[filterConfig.candlestickPattern]} candlestick pattern geometry satisfied at session i`;
 
     return {
@@ -81,6 +102,91 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
       setupCategory: category,
     };
   }, [data, filterConfig, forwardSessions, thresholdPercent]);
+
+  // Phase 14: Compute 2-condition combination (A alone, B alone, Combined intersection)
+  const combinedEvaluation = useMemo(() => {
+    if (!data || data.length === 0) return null;
+
+    const { signals: signalsA } = computeSignalsFromConfig(data, conditionAConfig);
+    const { signals: signalsB } = computeSignalsFromConfig(data, conditionBConfig);
+    const combinedSignals = combineSignalsAND(signalsA, signalsB);
+    const unionCount = getUnionSessionCount(signalsA, signalsB);
+
+    const scoreA = scoreSetup(data, signalsA, forwardSessions, thresholdPercent);
+    const scoreB = scoreSetup(data, signalsB, forwardSessions, thresholdPercent);
+    const scoreCombined = scoreSetup(data, combinedSignals, forwardSessions, thresholdPercent);
+
+    const descA = getSignalSetupDescription(conditionAConfig);
+    const descB = getSignalSetupDescription(conditionBConfig);
+
+    const categoryA =
+      conditionAConfig.mode === 'ma_cross'
+        ? 'Trend-Following'
+        : conditionAConfig.mode === 'rsi_threshold'
+        ? 'Mean-Reversion'
+        : conditionAConfig.mode === 'relative_volume'
+        ? 'Volume-Expansion'
+        : 'Candlestick Pattern';
+
+    const categoryB =
+      conditionBConfig.mode === 'ma_cross'
+        ? 'Trend-Following'
+        : conditionBConfig.mode === 'rsi_threshold'
+        ? 'Mean-Reversion'
+        : conditionBConfig.mode === 'relative_volume'
+        ? 'Volume-Expansion'
+        : 'Candlestick Pattern';
+
+    const formulaA =
+      conditionAConfig.mode === 'ma_cross'
+        ? `Cross: ${conditionAConfig.maCross.fastType}${conditionAConfig.maCross.fastPeriod} > ${conditionAConfig.maCross.slowType}${conditionAConfig.maCross.slowPeriod}`
+        : conditionAConfig.mode === 'rsi_threshold'
+        ? `RSI(${conditionAConfig.rsiThreshold.period}) ${conditionAConfig.rsiThreshold.direction} ${conditionAConfig.rsiThreshold.threshold}`
+        : conditionAConfig.mode === 'relative_volume'
+        ? `Rel Vol ≥ ${(conditionAConfig.relativeVolume?.threshold ?? 1.5).toFixed(1)}x`
+        : `${CANDLESTICK_PATTERN_LABELS[conditionAConfig.candlestickPattern]}`;
+
+    const formulaB =
+      conditionBConfig.mode === 'ma_cross'
+        ? `Cross: ${conditionBConfig.maCross.fastType}${conditionBConfig.maCross.fastPeriod} > ${conditionBConfig.maCross.slowType}${conditionBConfig.maCross.slowPeriod}`
+        : conditionBConfig.mode === 'rsi_threshold'
+        ? `RSI(${conditionBConfig.rsiThreshold.period}) ${conditionBConfig.rsiThreshold.direction} ${conditionBConfig.rsiThreshold.threshold}`
+        : conditionBConfig.mode === 'relative_volume'
+        ? `Rel Vol ≥ ${(conditionBConfig.relativeVolume?.threshold ?? 1.5).toFixed(1)}x`
+        : `${CANDLESTICK_PATTERN_LABELS[conditionBConfig.candlestickPattern]}`;
+
+    const formulaCombined = `Same-session AND intersection: (${formulaA}) AND (${formulaB})`;
+
+    // Honest zero-occurrence explanation for Combined
+    let combinedZeroNote: string;
+    if (signalsA.length === 0 && signalsB.length === 0) {
+      combinedZeroNote = 'Neither Condition A nor Condition B fired on this symbol, so the combined intersection is necessarily zero.';
+    } else if (signalsA.length === 0) {
+      combinedZeroNote = 'Condition A alone had 0 occurrences, so the combined intersection is necessarily zero.';
+    } else if (signalsB.length === 0) {
+      combinedZeroNote = 'Condition B alone had 0 occurrences, so the combined intersection is necessarily zero.';
+    } else {
+      combinedZeroNote = `Condition A fired ${signalsA.length} time${signalsA.length === 1 ? '' : 's'} and Condition B fired ${signalsB.length} time${signalsB.length === 1 ? '' : 's'}, but they never occurred on the exact same session (0 intersection).`;
+    }
+
+    return {
+      signalsA,
+      signalsB,
+      combinedSignals,
+      unionCount,
+      scoreA,
+      scoreB,
+      scoreCombined,
+      descA,
+      descB,
+      categoryA,
+      categoryB,
+      formulaA,
+      formulaB,
+      formulaCombined,
+      combinedZeroNote,
+    };
+  }, [data, conditionAConfig, conditionBConfig, forwardSessions, thresholdPercent]);
 
   const handleResetScoringParams = () => {
     setForwardSessions(10);
@@ -213,11 +319,164 @@ export const ProbabilityScoring: React.FC<ProbabilityScoringProps> = ({
               <TrendingUp className="w-4 h-4 text-blue-600" />
             ) : filterConfig.mode === 'rsi_threshold' ? (
               <Activity className="w-4 h-4 text-indigo-600" />
+            ) : filterConfig.mode === 'relative_volume' ? (
+              <BarChart3 className="w-4 h-4 text-emerald-600" />
             ) : (
               <CandlestickChart className="w-4 h-4 text-amber-600" />
             )
           }
         />
+      </div>
+
+      {/* Phase 14: Collapsible Combine Signals (2 Conditions, AND Logic) Section */}
+      <div className="border-t border-neutral-200 bg-neutral-50/40">
+        <div className="p-4 sm:p-5">
+          <button
+            id="toggle-combine-signals-btn"
+            type="button"
+            onClick={() => setIsCombinedOpen(!isCombinedOpen)}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white border border-neutral-200 hover:border-neutral-300 transition-colors text-left cursor-pointer shadow-2xs"
+          >
+            <div className="flex items-center gap-3">
+              <span className="p-2 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <GitMerge className="w-4 h-4" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-neutral-900">
+                    Combine Signals (2 Conditions, AND Logic)
+                  </span>
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
+                    Same-session intersection
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Side-by-side evaluation of Condition A alone, Condition B alone, and their exact same-session intersection.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
+              <span>{isCombinedOpen ? 'Collapse' : 'Expand Combination Lab'}</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  isCombinedOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+          </button>
+
+          {isCombinedOpen && combinedEvaluation && (
+            <div className="mt-5 space-y-5">
+              {/* Two Condition Pickers */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <SignalFilterPanel
+                  config={conditionAConfig}
+                  onChange={setConditionAConfig}
+                  title="Condition A"
+                  description="First independent signal rule (e.g. Trend or Reversion)"
+                />
+                <SignalFilterPanel
+                  config={conditionBConfig}
+                  onChange={setConditionBConfig}
+                  title="Condition B"
+                  description="Second independent signal rule (e.g. Relative Volume or Candlestick)"
+                />
+              </div>
+
+              {/* Plain-language comparison line */}
+              <div
+                id="combination-narrowing-banner"
+                className="p-3 rounded-lg bg-indigo-50/70 border border-indigo-200/80 flex items-center justify-between flex-wrap gap-2 text-xs text-indigo-950 font-medium"
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>
+                    {formatCombinationComparisonLine(
+                      combinedEvaluation.combinedSignals.length,
+                      combinedEvaluation.unionCount
+                    )}
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-indigo-800 bg-white/80 px-2 py-0.5 rounded border border-indigo-200">
+                  Strict same-session AND
+                </span>
+              </div>
+
+              {/* Three Result Cards in Exact Order: Condition A alone, Condition B alone, Combined */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* 1. Condition A Alone */}
+                <SetupCard
+                  title={combinedEvaluation.descA}
+                  category={combinedEvaluation.categoryA}
+                  formulaDescription={combinedEvaluation.formulaA}
+                  symbol={symbol}
+                  forwardSessions={forwardSessions}
+                  thresholdPercent={thresholdPercent}
+                  scoreResult={combinedEvaluation.scoreA}
+                  totalSignalsDetected={combinedEvaluation.signalsA.length}
+                  badgeLabel="Condition A Alone"
+                  badgeTone="blue"
+                  defaultExpandTable={false}
+                  icon={
+                    conditionAConfig.mode === 'ma_cross' ? (
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                    ) : conditionAConfig.mode === 'rsi_threshold' ? (
+                      <Activity className="w-4 h-4 text-indigo-600" />
+                    ) : conditionAConfig.mode === 'relative_volume' ? (
+                      <BarChart3 className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <CandlestickChart className="w-4 h-4 text-amber-600" />
+                    )
+                  }
+                />
+
+                {/* 2. Condition B Alone */}
+                <SetupCard
+                  title={combinedEvaluation.descB}
+                  category={combinedEvaluation.categoryB}
+                  formulaDescription={combinedEvaluation.formulaB}
+                  symbol={symbol}
+                  forwardSessions={forwardSessions}
+                  thresholdPercent={thresholdPercent}
+                  scoreResult={combinedEvaluation.scoreB}
+                  totalSignalsDetected={combinedEvaluation.signalsB.length}
+                  badgeLabel="Condition B Alone"
+                  badgeTone="emerald"
+                  defaultExpandTable={false}
+                  icon={
+                    conditionBConfig.mode === 'ma_cross' ? (
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                    ) : conditionBConfig.mode === 'rsi_threshold' ? (
+                      <Activity className="w-4 h-4 text-indigo-600" />
+                    ) : conditionBConfig.mode === 'relative_volume' ? (
+                      <BarChart3 className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <CandlestickChart className="w-4 h-4 text-amber-600" />
+                    )
+                  }
+                />
+
+                {/* 3. Combined (A AND B) */}
+                <SetupCard
+                  title={`${combinedEvaluation.descA} AND ${combinedEvaluation.descB}`}
+                  category="Combined Setup (AND Logic)"
+                  formulaDescription={combinedEvaluation.formulaCombined}
+                  symbol={symbol}
+                  forwardSessions={forwardSessions}
+                  thresholdPercent={thresholdPercent}
+                  scoreResult={combinedEvaluation.scoreCombined}
+                  totalSignalsDetected={combinedEvaluation.combinedSignals.length}
+                  badgeLabel="Combined (A AND B)"
+                  badgeTone="indigo"
+                  zeroOccurrenceNote={combinedEvaluation.combinedZeroNote}
+                  isCombinedCard={true}
+                  defaultExpandTable={false}
+                  icon={<GitMerge className="w-4 h-4 text-indigo-600" />}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -233,6 +492,11 @@ interface SetupCardProps {
   scoreResult: SetupScoreResult | null;
   totalSignalsDetected: number;
   icon: React.ReactNode;
+  badgeLabel?: string;
+  badgeTone?: 'neutral' | 'blue' | 'indigo' | 'emerald';
+  zeroOccurrenceNote?: string;
+  isCombinedCard?: boolean;
+  defaultExpandTable?: boolean;
 }
 
 const SetupCard: React.FC<SetupCardProps> = ({
@@ -245,8 +509,13 @@ const SetupCard: React.FC<SetupCardProps> = ({
   scoreResult,
   totalSignalsDetected,
   icon,
+  badgeLabel,
+  badgeTone = 'neutral',
+  zeroOccurrenceNote,
+  isCombinedCard = false,
+  defaultExpandTable = true,
 }) => {
-  const [isTableExpanded, setIsTableExpanded] = useState<boolean>(true);
+  const [isTableExpanded, setIsTableExpanded] = useState<boolean>(defaultExpandTable);
 
   if (!scoreResult) {
     return (
@@ -266,6 +535,7 @@ const SetupCard: React.FC<SetupCardProps> = ({
   } = scoreResult;
 
   const isLowSampleSize = totalOccurrences > 0 && totalOccurrences < 10;
+  const isUltraLowSampleSize = totalOccurrences > 0 && totalOccurrences < 3;
   const hasZeroTotal = totalOccurrences === 0;
 
   return (
@@ -274,13 +544,28 @@ const SetupCard: React.FC<SetupCardProps> = ({
       <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {icon}
               <h4 className="font-bold text-neutral-900 text-base">{title}</h4>
+              {badgeLabel && (
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold uppercase tracking-wider ${
+                    badgeTone === 'indigo'
+                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                      : badgeTone === 'blue'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : badgeTone === 'emerald'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-neutral-200/80 text-neutral-800 border border-neutral-300'
+                  }`}
+                >
+                  {badgeLabel}
+                </span>
+              )}
             </div>
             <div className="text-[11px] text-neutral-500 font-medium mt-0.5">{category}</div>
           </div>
-          <span className="text-[10px] font-mono bg-neutral-200/70 text-neutral-700 px-2 py-0.5 rounded">
+          <span className="text-[10px] font-mono bg-neutral-200/70 text-neutral-700 px-2 py-0.5 rounded shrink-0">
             Target: +{thresholdPercent}% @ {forwardSessions}d
           </span>
         </div>
@@ -298,7 +583,11 @@ const SetupCard: React.FC<SetupCardProps> = ({
             <div className="font-semibold text-xs text-neutral-800">
               No historical occurrences of this setup for {symbol}
             </div>
-            {excludedOccurrences > 0 ? (
+            {zeroOccurrenceNote ? (
+              <p className="text-[11px] text-neutral-500 mt-1 max-w-sm mx-auto font-sans">
+                {zeroOccurrenceNote}
+              </p>
+            ) : excludedOccurrences > 0 ? (
               <p className="text-[11px] text-neutral-500 mt-1 max-w-sm mx-auto">
                 {excludedOccurrences} occurrence was detected, but it occurred within the last {forwardSessions}{' '}
                 sessions and does not yet have enough forward history to score.
@@ -369,8 +658,18 @@ const SetupCard: React.FC<SetupCardProps> = ({
               </div>
             </div>
 
-            {/* Low Sample Size Honest Caveat */}
-            {isLowSampleSize && (
+            {/* Ultra-low Sample (<3) Honest Caveat */}
+            {isUltraLowSampleSize ? (
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Too few occurrences to draw any conclusion:</span> Only{' '}
+                  <span className="font-bold">{totalOccurrences} occurrence{totalOccurrences === 1 ? '' : 's'}</span> exist in data.
+                  A hit rate ({hitRate !== null ? `${hitRate.toFixed(1)}%` : '—'}) calculated on {totalOccurrences} session{totalOccurrences === 1 ? '' : 's'} does not constitute reliable statistical evidence.
+                </div>
+              </div>
+            ) : isLowSampleSize ? (
+              /* Standard Low Sample Size (<10) Caveat */
               <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
@@ -380,7 +679,7 @@ const SetupCard: React.FC<SetupCardProps> = ({
                   provide statistical significance.
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Note on Excluded Occurrences if any */}
             {excludedOccurrences > 0 && (

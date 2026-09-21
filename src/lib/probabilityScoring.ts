@@ -6,7 +6,7 @@ import {
   SignalFilterConfig,
   CANDLESTICK_PATTERN_LABELS,
 } from '../types';
-import { calculateSMA, calculateEMA, calculateRSI } from './indicators';
+import { calculateSMA, calculateEMA, calculateRSI, calculateRelativeVolume } from './indicators';
 import {
   detectDoji,
   detectBullishMarubozu,
@@ -175,6 +175,33 @@ export function detectRSIThresholdSignals(
 }
 
 /**
+ * Generic Relative Volume threshold detector:
+ * Fires at index i if relativeVolumeSeries[i] !== null AND relativeVolumeSeries[i] >= threshold.
+ * Reuses existing relative volume series (ratio vs 20-session baseline volume).
+ *
+ * @param relativeVolumeSeries Precomputed relative volume series
+ * @param threshold Numerical ratio threshold (e.g. 1.5 for 1.5x average volume)
+ * @returns Array of integer indices where relative volume meets or exceeds threshold.
+ */
+export function detectRelativeVolumeSignals(
+  relativeVolumeSeries: (number | null)[],
+  threshold: number
+): number[] {
+  if (!relativeVolumeSeries || relativeVolumeSeries.length === 0) return [];
+
+  const signals: number[] = [];
+
+  for (let i = 0; i < relativeVolumeSeries.length; i++) {
+    const val = relativeVolumeSeries[i];
+    if (val !== null && val >= threshold) {
+      signals.push(i);
+    }
+  }
+
+  return signals;
+}
+
+/**
  * Scores a setup by evaluating forward performance exactly N sessions after each signal.
  *
  * - "Worked" = close[i+N] >= close[i] * (1 + threshold), default threshold 2% (0.02)
@@ -317,6 +344,21 @@ export function computeSignalsFromConfig(
     const rsiSeries = calculateRSI(data, period);
     const signals = detectRSIThresholdSignals(rsiSeries, threshold, direction);
     return { signals, rsiSeries };
+  } else if (config.mode === 'relative_volume') {
+    const threshold = Number.isFinite(config.relativeVolume?.threshold)
+      ? config.relativeVolume.threshold
+      : 1.5;
+
+    // Reuse existing pre-computed relativeVolume if present on records, otherwise calculate
+    let rvolSeries: (number | null)[];
+    if (data.length > 0 && (data[0] as PriceRecordWithIndicators).relativeVolume !== undefined) {
+      rvolSeries = (data as PriceRecordWithIndicators[]).map((d) => d.relativeVolume ?? null);
+    } else {
+      rvolSeries = calculateRelativeVolume(data, 20);
+    }
+
+    const signals = detectRelativeVolumeSignals(rvolSeries, threshold);
+    return { signals };
   } else {
     // Candlestick Pattern Detection
     let signals: number[] = [];
@@ -406,6 +448,9 @@ export function getSignalSetupDescription(config: SignalFilterConfig): string {
         ? `Recovery (crosses ≥ ${config.rsiThreshold.threshold})`
         : `Breakdown (crosses ≤ ${config.rsiThreshold.threshold})`;
     return `RSI(${config.rsiThreshold.period}) ${dirLabel}`;
+  } else if (config.mode === 'relative_volume') {
+    const threshold = config.relativeVolume?.threshold ?? 1.5;
+    return `Relative Volume ≥ ${threshold.toFixed(1)}x`;
   } else {
     const label = CANDLESTICK_PATTERN_LABELS[config.candlestickPattern] || 'Candlestick Pattern';
     return `${label} Pattern`;

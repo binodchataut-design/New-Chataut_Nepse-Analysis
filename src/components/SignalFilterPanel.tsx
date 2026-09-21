@@ -8,7 +8,7 @@ import {
   CANDLESTICK_PATTERN_LABELS,
   DEFAULT_SIGNAL_FILTER_CONFIG,
 } from '../types';
-import { Sliders, RotateCcw, TrendingUp, Activity, CandlestickChart } from 'lucide-react';
+import { Sliders, RotateCcw, TrendingUp, Activity, CandlestickChart, BarChart3 } from 'lucide-react';
 import { CandlestickHonestyNote } from './CandlestickHonestyNote';
 
 export interface SignalFilterPanelProps {
@@ -133,12 +133,24 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
     });
   };
 
+  const handleRvolThresholdChange = (val: number) => {
+    const threshold = Math.max(0.1, Math.min(50, isNaN(val) ? 1.5 : val));
+    onChange({
+      ...config,
+      relativeVolume: {
+        ...config.relativeVolume,
+        threshold,
+      },
+    });
+  };
+
   const handleReset = () => {
     onChange({
       mode: config.mode, // keep currently selected mode or full reset
       maCross: { ...DEFAULT_SIGNAL_FILTER_CONFIG.maCross },
       rsiThreshold: { ...DEFAULT_SIGNAL_FILTER_CONFIG.rsiThreshold },
       candlestickPattern: DEFAULT_SIGNAL_FILTER_CONFIG.candlestickPattern,
+      relativeVolume: { ...DEFAULT_SIGNAL_FILTER_CONFIG.relativeVolume },
     });
   };
 
@@ -206,6 +218,19 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
             >
               <CandlestickChart className="w-3 h-3 text-amber-600" />
               <span>Candlestick Pattern</span>
+            </button>
+            <button
+              id="filter-mode-relative-volume"
+              type="button"
+              onClick={() => handleModeChange('relative_volume')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                config.mode === 'relative_volume'
+                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <BarChart3 className="w-3 h-3 text-emerald-600" />
+              <span>Relative Volume</span>
             </button>
           </div>
 
@@ -453,6 +478,36 @@ export const SignalFilterPanel: React.FC<SignalFilterPanelProps> = ({
 
           {/* Persistent Honesty / Caution Note */}
           <CandlestickHonestyNote />
+        </div>
+      )}
+
+      {/* Relative Volume Threshold Controls */}
+      {config.mode === 'relative_volume' && (
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <div className="flex items-center gap-2 bg-neutral-50/80 px-3 py-1.5 rounded-lg border border-neutral-200">
+            <span className="font-semibold text-neutral-700">Volume Threshold:</span>
+            <div className="relative inline-flex items-center">
+              <span className="text-neutral-500 font-mono text-xs mr-1">&ge;</span>
+              <input
+                id="filter-rvol-threshold-input"
+                type="number"
+                min="0.1"
+                max="50"
+                step="0.1"
+                value={config.relativeVolume?.threshold ?? 1.5}
+                onChange={(e) => handleRvolThresholdChange(parseFloat(e.target.value))}
+                className="w-16 px-2 py-0.5 font-mono text-xs bg-white border border-neutral-300 rounded focus:outline-hidden focus:ring-1 focus:ring-neutral-900 cursor-text"
+              />
+              <span className="text-neutral-500 text-xs ml-1 font-mono">x</span>
+            </div>
+            <span className="text-[11px] text-neutral-500 ml-1">
+              (vs 20-session baseline)
+            </span>
+          </div>
+
+          <div className="text-[11px] font-mono text-neutral-500 bg-neutral-100/70 px-2.5 py-1 rounded-md border border-neutral-200/60">
+            Trigger: fires on session i when volume &ge; {(config.relativeVolume?.threshold ?? 1.5).toFixed(1)}x of its 20-session average volume
+          </div>
         </div>
       )}
     </div>

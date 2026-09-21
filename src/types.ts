@@ -164,7 +164,7 @@ export interface BacktestResult {
 
 export type MAType = 'SMA' | 'EMA';
 export type RSIDirection = 'recovery' | 'breakdown';
-export type FilterMode = 'ma_cross' | 'rsi_threshold' | 'candlestick';
+export type FilterMode = 'ma_cross' | 'rsi_threshold' | 'candlestick' | 'relative_volume';
 
 export type CandlestickPatternType =
   | 'doji'
@@ -228,11 +228,16 @@ export interface RSIThresholdConfig {
   direction: RSIDirection;
 }
 
+export interface RelativeVolumeConfig {
+  threshold: number;
+}
+
 export interface SignalFilterConfig {
   mode: FilterMode;
   maCross: MACrossConfig;
   rsiThreshold: RSIThresholdConfig;
   candlestickPattern: CandlestickPatternType;
+  relativeVolume: RelativeVolumeConfig;
 }
 
 export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
@@ -249,6 +254,9 @@ export const DEFAULT_SIGNAL_FILTER_CONFIG: SignalFilterConfig = {
     direction: 'recovery',
   },
   candlestickPattern: 'hammer',
+  relativeVolume: {
+    threshold: 1.5,
+  },
 };
 
 export type JournalStatus = 'open' | 'closed';
