@@ -56,22 +56,42 @@ async function getAllCompanySymbols() {
   return symbols;
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${REQUEST_TIMEOUT_MS / 1000}s`)), REQUEST_TIMEOUT_MS)
+    ),
+  ]);
+}
+
 async function getLastDateForSymbol(symbol) {
-  const { data, error } = await supabase
-    .from('daily_prices')
-    .select('date')
-    .eq('symbol', symbol)
-    .order('date', { ascending: false })
-    .limit(1);
+  const { data, error } = await withTimeout(
+    supabase
+      .from('daily_prices')
+      .select('date')
+      .eq('symbol', symbol)
+      .order('date', { ascending: false })
+      .limit(1),
+    `Lookup for ${symbol}`
+  );
   if (error) throw new Error(`Lookup failed for ${symbol}: ${error.message}`);
   return data && data.length > 0 ? data[0].date : null;
 }
 
 async function fetchSourceCsv(symbol) {
-  const res = await fetch(`${SOURCE_BASE}/${encodeURIComponent(symbol)}.csv`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Source fetch failed for ${symbol}: HTTP ${res.status}`);
-  return parseCsv(await res.text());
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${SOURCE_BASE}/${encodeURIComponent(symbol)}.csv`, { signal: controller.signal });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Source fetch failed for ${symbol}: HTTP ${res.status}`);
+    return parseCsv(await res.text());
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function syncSymbol(symbol, stats) {
@@ -106,9 +126,10 @@ async function syncSymbol(symbol, stats) {
       return;
     }
 
-    const { error } = await supabase
-      .from('daily_prices')
-      .upsert(newRows, { onConflict: 'symbol,date' });
+    const { error } = await withTimeout(
+      supabase.from('daily_prices').upsert(newRows, { onConflict: 'symbol,date' }),
+      `Upsert for ${symbol}`
+    );
     if (error) throw new Error(`Upsert failed for ${symbol}: ${error.message}`);
 
     stats.updated.push({ symbol, rowsAdded: newRows.length, latestDate: newRows[newRows.length - 1].date });
@@ -161,7 +182,7 @@ async function main() {
   if (stats.errors.length > 0) {
     console.log('\nErrors:');
     stats.errors.forEach((e) => console.log(`  ${e.symbol}: ${e.message}`));
-    process.exitCode = 1;
+    process.exitCode = 1; // mark the Action run as failed so you notice
   }
 }
 
