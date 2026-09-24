@@ -39,7 +39,7 @@ export const SchemaInspector: React.FC<SchemaInspectorProps> = ({
           <Database className="w-4 h-4 text-neutral-600" />
           <span>Live Supabase Schema Introspection</span>
           {report && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium font-mono">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20 font-medium font-mono">
               {report.companies.columns.length + report.daily_prices.columns.length + report.market_index.columns.length} columns discovered
             </span>
           )}
@@ -114,7 +114,7 @@ export const SchemaInspector: React.FC<SchemaInspectorProps> = ({
                     <span className="font-semibold text-neutral-800 font-mono">
                       `{currentTable.tableName}` columns ({currentTable.columns.length})
                     </span>
-                    <span className="text-emerald-700 font-medium flex items-center gap-1">
+                    <span className="text-[var(--success)] font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Live schema verified
                     </span>

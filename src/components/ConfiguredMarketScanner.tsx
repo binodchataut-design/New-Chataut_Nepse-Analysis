@@ -395,7 +395,7 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                       <td className="py-2.5 px-3 text-neutral-600">{m.signalDate}</td>
                       <td className="py-2.5 px-3 text-neutral-500 font-sans">
                         {m.sessionsAgo === 0 ? (
-                          <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px]">
+                          <span className="font-semibold text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/20 px-1.5 py-0.5 rounded text-[11px]">
                             Latest session
                           </span>
                         ) : (
@@ -416,7 +416,7 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                         {m.avgForwardReturn !== null ? (
                           <span
                             className={`font-bold ${
-                              m.avgForwardReturn >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                              m.avgForwardReturn >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'
                             }`}
                           >
                             {m.avgForwardReturn >= 0 ? '+' : ''}
@@ -481,7 +481,7 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                         <td className="py-2.5 px-3 text-neutral-600">{m.signalDate}</td>
                         <td className="py-2.5 px-3 text-neutral-500 font-sans">
                           {m.sessionsAgo === 0 ? (
-                            <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px]">
+                            <span className="font-semibold text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/20 px-1.5 py-0.5 rounded text-[11px]">
                               Latest session
                             </span>
                           ) : (
@@ -502,7 +502,7 @@ export const ConfiguredMarketScanner: React.FC<ConfiguredMarketScannerProps> = (
                           {m.avgForwardReturn !== null ? (
                             <span
                               className={`font-medium ${
-                                m.avgForwardReturn >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                m.avgForwardReturn >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'
                               }`}
                             >
                               {m.avgForwardReturn >= 0 ? '+' : ''}

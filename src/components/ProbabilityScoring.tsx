@@ -574,7 +574,7 @@ const SetupCard: React.FC<SetupCardProps> = ({
                       : badgeTone === 'blue'
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
                       : badgeTone === 'emerald'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      ? 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20'
                       : 'bg-neutral-200/80 text-neutral-800 border border-neutral-300'
                   }`}
                 >
@@ -644,8 +644,8 @@ const SetupCard: React.FC<SetupCardProps> = ({
                 <div
                   className={`text-xl font-bold font-mono mt-0.5 ${
                     avgForwardReturn !== null && avgForwardReturn >= 0
-                      ? 'text-emerald-700'
-                      : 'text-rose-700'
+                      ? 'text-[var(--success)]'
+                      : 'text-[var(--danger)]'
                   }`}
                 >
                   {avgForwardReturn !== null
@@ -768,8 +768,8 @@ const SetupCard: React.FC<SetupCardProps> = ({
                       return (
                         <tr
                           key={`occ-${idx}`}
-                          className={`hover:bg-neutral-50 ${
-                            occ.worked ? 'bg-emerald-50/20' : 'bg-rose-50/10'
+                          className={`hover:bg-neutral-50 transition-colors ${
+                            occ.worked ? 'bg-[var(--success)]/[0.04]' : 'bg-[var(--danger)]/[0.03]'
                           }`}
                         >
                           <td className="py-1.5 px-2.5 text-neutral-400">{idx + 1}</td>
@@ -782,10 +782,10 @@ const SetupCard: React.FC<SetupCardProps> = ({
                             {occ.outcomeClose !== null ? `NPR ${occ.outcomeClose.toFixed(1)}` : '—'}
                           </td>
                           <td
-                            className={`py-1.5 px-2.5 font-bold ${
+                            className={`py-1.5 px-2.5 font-bold font-mono ${
                               occ.forwardReturn !== null && occ.forwardReturn >= 0
-                                ? 'text-emerald-700'
-                                : 'text-rose-700'
+                                ? 'text-[var(--success)]'
+                                : 'text-[var(--danger)]'
                             }`}
                           >
                             {occ.forwardReturn !== null
@@ -794,13 +794,13 @@ const SetupCard: React.FC<SetupCardProps> = ({
                           </td>
                           <td className="py-1.5 px-2.5">
                             {occ.worked ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20">
+                                <CheckCircle2 className="w-3 h-3 text-[var(--success)] shrink-0" strokeWidth={2} />
                                 Worked (≥+{thresholdPercent}%)
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
-                                <XCircle className="w-3 h-3 text-rose-600" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">
+                                <XCircle className="w-3 h-3 text-[var(--danger)] shrink-0" strokeWidth={2} />
                                 No (&lt;+{thresholdPercent}%)
                               </span>
                             )}

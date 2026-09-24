@@ -30,14 +30,14 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
       id="liquidity-panel"
       className={`border rounded-xl shadow-xs transition-colors overflow-hidden ${
         metrics.isStale
-          ? 'bg-amber-50/40 border-amber-300'
+          ? 'bg-amber-50/20 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60'
           : 'bg-white border-neutral-200'
       }`}
     >
       {/* Panel Header */}
       <div className="px-4 py-3 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
-          <Droplets className={`w-4 h-4 ${metrics.isStale ? 'text-amber-600' : 'text-neutral-600'}`} />
+          <Droplets className={`w-4 h-4 ${metrics.isStale ? 'text-amber-600 dark:text-amber-400' : 'text-neutral-600'}`} />
           <div className="flex items-baseline gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-neutral-900">
               Liquidity Profile
@@ -51,13 +51,13 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
         {/* Status Indicator */}
         <div className="flex items-center gap-2">
           {metrics.isStale ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono bg-amber-100 text-amber-900 border border-amber-300">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" strokeWidth={2} />
               <span>Stale Trading Activity ({metrics.daysSinceLastTrade} sessions inactive)</span>
             </span>
           ) : metrics.daysSinceLastTrade !== null ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium font-mono bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[var(--success)] shrink-0" strokeWidth={2} />
               <span>
                 {metrics.daysSinceLastTrade === 0
                   ? 'Active (traded on latest market session)'
@@ -70,7 +70,7 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
 
       {/* Prominent Warning Callout if Stale */}
       {metrics.isStale && (
-        <div className="p-3 border-b border-neutral-200">
+        <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
           <CautionNotice
             id="liquidity-stale-warning"
             severity="caution"
@@ -78,7 +78,7 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
           >
             This stock last traded on{' '}
             <span className="font-mono font-bold">{metrics.latestSessionDate}</span>, which is{' '}
-            <span className="font-mono font-bold text-rose-800">{metrics.daysSinceLastTrade} market sessions</span> behind the latest market date ({metrics.marketLatestDate}). Signals on stale instruments carry severe execution risk.
+            <span className="font-mono font-bold text-[var(--danger)]">{metrics.daysSinceLastTrade} market sessions</span> behind the latest market date ({metrics.marketLatestDate}). Signals on stale instruments carry severe execution risk.
           </CautionNotice>
         </div>
       )}
@@ -133,20 +133,20 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
               {metrics.liquidityTrendRatio !== null ? `${metrics.liquidityTrendRatio.toFixed(2)}x` : '—'}
             </span>
             {metrics.liquidityTrendDirection === 'rising' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-emerald-100 text-emerald-800">
-                <ArrowUpRight className="w-3 h-3 text-emerald-700" />
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20">
+                <ArrowUpRight className="w-3 h-3 text-[var(--success)]" strokeWidth={2} />
                 Rising
               </span>
             )}
             {metrics.liquidityTrendDirection === 'fading' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-rose-100 text-rose-800">
-                <ArrowDownRight className="w-3 h-3 text-rose-700" />
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">
+                <ArrowDownRight className="w-3 h-3 text-[var(--danger)]" strokeWidth={2} />
                 Fading
               </span>
             )}
             {metrics.liquidityTrendDirection === 'neutral' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium font-mono bg-neutral-200 text-neutral-700">
-                <Minus className="w-3 h-3 text-neutral-500" />
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium font-mono bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                <Minus className="w-3 h-3 text-neutral-500" strokeWidth={2} />
                 Normal
               </span>
             )}
@@ -163,7 +163,7 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
           </div>
           <div className="text-base font-bold font-mono">
             {metrics.daysSinceLastTrade !== null ? (
-              <span className={metrics.isStale ? 'text-rose-700 font-extrabold' : 'text-neutral-900'}>
+              <span className={metrics.isStale ? 'text-[var(--danger)] font-extrabold' : 'text-neutral-900'}>
                 {metrics.daysSinceLastTrade}{' '}
                 <span className="text-xs font-normal text-neutral-500">
                   session{metrics.daysSinceLastTrade === 1 ? '' : 's'}
@@ -176,7 +176,7 @@ export const LiquidityPanel: React.FC<LiquidityPanelProps> = ({ metrics, isLoadi
           <div className="text-[11px] text-neutral-400 flex items-center justify-between">
             <span>Market max: {metrics.marketLatestDate || 'N/A'}</span>
             {metrics.isStale && (
-              <span className="text-rose-600 font-semibold font-mono text-[10px]">
+              <span className="text-[var(--danger)] font-semibold font-mono text-[10px]">
                 &gt; 5 sessions
               </span>
             )}

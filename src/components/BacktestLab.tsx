@@ -252,7 +252,7 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
                 Target:
               </label>
               <div className="relative inline-flex items-center">
-                <span className="absolute left-2 text-xs font-mono font-bold text-emerald-600">+</span>
+                <span className="absolute left-2 text-xs font-mono font-bold text-[var(--success)]">+</span>
                 <input
                   id="target-pct-input"
                   type="number"
@@ -273,7 +273,7 @@ export const BacktestLab: React.FC<BacktestLabProps> = ({
                 Stop-Loss:
               </label>
               <div className="relative inline-flex items-center">
-                <span className="absolute left-2 text-xs font-mono font-bold text-rose-600">-</span>
+                <span className="absolute left-2 text-xs font-mono font-bold text-[var(--danger)]">-</span>
                 <input
                   id="stop-pct-input"
                   type="number"
@@ -636,7 +636,7 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                       : badgeTone === 'blue'
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
                       : badgeTone === 'emerald'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      ? 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20'
                       : 'bg-neutral-200/80 text-neutral-800 border border-neutral-300'
                   }`}
                 >
@@ -647,10 +647,10 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
             <div className="text-[11px] text-neutral-500 font-medium mt-0.5">{category}</div>
           </div>
           <div className="flex items-center gap-1.5 font-mono text-[10px] flex-wrap">
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-semibold">
+            <span className="bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20 px-2 py-0.5 rounded font-semibold">
               Target: +{targetPct}%
             </span>
-            <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded font-semibold">
+            <span className="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 px-2 py-0.5 rounded font-semibold">
               Stop: -{stopPct}%
             </span>
             <span className="bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded">
@@ -717,8 +717,8 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                   className={`text-xl font-bold font-mono mt-0.5 ${
                     expectancy !== null
                       ? expectancy >= 0
-                        ? 'text-emerald-700'
-                        : 'text-rose-700'
+                        ? 'text-[var(--success)]'
+                        : 'text-[var(--danger)]'
                       : 'text-neutral-900'
                   }`}
                 >
@@ -738,11 +738,11 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                   Avg Win / Loss
                 </div>
                 <div className="text-xs font-mono font-bold mt-1.5 space-y-1">
-                  <div className="text-emerald-700 flex justify-between">
+                  <div className="text-[var(--success)] flex justify-between">
                     <span>Avg Win:</span>
                     <span>{avgWinReturn !== null ? `+${avgWinReturn.toFixed(2)}%` : '—'}</span>
                   </div>
-                  <div className="text-rose-700 flex justify-between">
+                  <div className="text-[var(--danger)] flex justify-between">
                     <span>Avg Loss:</span>
                     <span>{avgLossReturn !== null ? `${avgLossReturn.toFixed(2)}%` : '—'}</span>
                   </div>
@@ -761,8 +761,8 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                   {totalTrades}
                 </div>
                 <div className="text-[11px] text-neutral-600 font-mono mt-0.5">
-                  <span className="text-emerald-700 font-medium">{wins}W</span> /{' '}
-                  <span className="text-rose-700 font-medium">{losses}L</span> /{' '}
+                  <span className="text-[var(--success)] font-medium">{wins}W</span> /{' '}
+                  <span className="text-[var(--danger)] font-medium">{losses}L</span> /{' '}
                   <span className="text-neutral-500">{expired}Exp</span>
                 </div>
                 <div className="text-[10px] text-neutral-400 mt-0.5 font-mono">
@@ -843,9 +843,9 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                           key={`trade-${idx}`}
                           className={`hover:bg-neutral-50 transition-colors ${
                             isWin
-                              ? 'bg-emerald-50/20'
+                              ? 'bg-[var(--success)]/[0.04]'
                               : isLoss
-                              ? 'bg-rose-50/10'
+                              ? 'bg-[var(--danger)]/[0.03]'
                               : 'bg-neutral-50/40'
                           }`}
                         >
@@ -871,11 +871,11 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                             {trade.holdingSessions} {trade.holdingSessions === 1 ? 'session' : 'sessions'}
                           </td>
                           <td
-                            className={`py-1.5 px-2.5 text-right font-bold ${
+                            className={`py-1.5 px-2.5 text-right font-bold font-mono ${
                               trade.returnPct > 0
-                                ? 'text-emerald-700'
+                                ? 'text-[var(--success)]'
                                 : trade.returnPct < 0
-                                ? 'text-rose-700'
+                                ? 'text-[var(--danger)]'
                                 : 'text-neutral-600'
                             }`}
                           >
@@ -884,18 +884,18 @@ const BacktestSetupCard: React.FC<BacktestSetupCardProps> = ({
                           </td>
                           <td className="py-1.5 px-2.5">
                             {isWin ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20">
+                                <CheckCircle2 className="w-3 h-3 text-[var(--success)] shrink-0" strokeWidth={2} />
                                 Target (+{targetPct}%)
                               </span>
                             ) : isLoss ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
-                                <XCircle className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">
+                                <XCircle className="w-3 h-3 text-[var(--danger)] shrink-0" strokeWidth={2} />
                                 Stop (-{stopPct}%)
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-200 text-neutral-700">
-                                <Clock className="w-3 h-3 text-neutral-500 shrink-0" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                                <Clock className="w-3 h-3 text-neutral-400 shrink-0" strokeWidth={2} />
                                 Expired ({trade.holdingSessions}s)
                               </span>
                             )}

@@ -3,6 +3,7 @@ import {
   BookOpen,
   PlusCircle,
   CheckCircle2,
+  XCircle,
   Trash2,
   Edit3,
   Clock,
@@ -385,7 +386,7 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                 {summary.totalClosed}
               </div>
             </div>
-            <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
+            <div className="p-2.5 bg-[var(--success)]/10 text-[var(--success)] rounded-lg border border-[var(--success)]/20">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
@@ -733,10 +734,10 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                     <td className="py-2.5 px-3 font-mono font-medium text-neutral-900 text-right">
                       {entry.entry_price.toFixed(2)}
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-rose-700 text-right">
+                    <td className="py-2.5 px-3 font-mono text-[var(--danger)] text-right">
                       {entry.stop_loss !== null ? entry.stop_loss.toFixed(2) : '—'}
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-emerald-700 text-right">
+                    <td className="py-2.5 px-3 font-mono text-[var(--success)] text-right">
                       {entry.target_price !== null ? entry.target_price.toFixed(2) : '—'}
                     </td>
                     <td className="py-2.5 px-3 font-mono text-neutral-600 text-right">
@@ -833,7 +834,16 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                   const holdingDays = calculateHoldingDays(entry);
 
                   return (
-                    <tr key={entry.id} className="hover:bg-neutral-50/80 transition-colors">
+                    <tr
+                      key={entry.id}
+                      className={`hover:bg-neutral-50/80 transition-colors ${
+                        outcome === 'Win'
+                          ? 'bg-[var(--success)]/[0.04]'
+                          : outcome === 'Loss'
+                          ? 'bg-[var(--danger)]/[0.03]'
+                          : ''
+                      }`}
+                    >
                       <td className="py-2.5 px-3 font-bold font-mono text-neutral-900">
                         {entry.symbol}
                       </td>
@@ -849,7 +859,15 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                       </td>
                       <td className="py-2.5 px-3 font-mono font-bold text-right">
                         {ret !== null ? (
-                          <span className={ret > 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                          <span
+                            className={
+                              ret > 0
+                                ? 'text-[var(--success)]'
+                                : ret < 0
+                                ? 'text-[var(--danger)]'
+                                : 'text-neutral-600'
+                            }
+                          >
                             {ret >= 0 ? '+' : ''}
                             {ret.toFixed(2)}%
                           </span>
@@ -859,12 +877,12 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         {outcome === 'Win' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-bold text-[10px]">
-                            <TrendingUp className="w-3 h-3" /> Win
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20">
+                            <CheckCircle2 className="w-3 h-3 text-[var(--success)] shrink-0" strokeWidth={2} /> Win
                           </span>
                         ) : outcome === 'Loss' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded-full font-bold text-[10px]">
-                            <TrendingDown className="w-3 h-3" /> Loss
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">
+                            <XCircle className="w-3 h-3 text-[var(--danger)] shrink-0" strokeWidth={2} /> Loss
                           </span>
                         ) : (
                           <span className="text-neutral-400">—</span>
@@ -989,7 +1007,7 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({
                     const ep = parseFloat(closeExitPrice);
                     const ret = ((ep - closingEntry.entry_price) / closingEntry.entry_price) * 100;
                     return (
-                      <span className={`font-mono font-bold ${ret > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      <span className={`font-mono font-bold ${ret > 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                         {ret >= 0 ? '+' : ''}
                         {ret.toFixed(2)}% ({ret > 0 ? 'Win' : 'Loss'})
                       </span>

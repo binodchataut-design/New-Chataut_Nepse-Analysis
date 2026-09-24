@@ -134,8 +134,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div
                       className={`text-base font-bold font-mono mt-0.5 flex items-center gap-1 ${
                         indexStatus.pointsChange !== null && indexStatus.pointsChange >= 0
-                          ? 'text-emerald-700'
-                          : 'text-rose-700'
+                          ? 'text-[var(--success)]'
+                          : 'text-[var(--danger)]'
                       }`}
                     >
                       {indexStatus.pointsChange !== null && indexStatus.pointsChange >= 0 ? (
@@ -161,8 +161,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div
                       className={`text-base font-bold font-mono mt-0.5 ${
                         indexStatus.percentChangeStored !== null && indexStatus.percentChangeStored >= 0
-                          ? 'text-emerald-700'
-                          : 'text-rose-700'
+                          ? 'text-[var(--success)]'
+                          : 'text-[var(--danger)]'
                       }`}
                     >
                       {indexStatus.percentChangeStored !== null
@@ -204,9 +204,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         id="market-regime-badge"
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                           indexStatus.regimeInfo.regime === 'Bullish'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            ? 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/20'
                             : indexStatus.regimeInfo.regime === 'Bearish'
-                            ? 'bg-rose-50 text-rose-800 border-rose-200'
+                            ? 'bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/20'
                             : indexStatus.regimeInfo.regime === 'Neutral'
                             ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
                             : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -215,15 +215,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
                             indexStatus.regimeInfo.regime === 'Bullish'
-                              ? 'bg-emerald-500'
+                              ? 'bg-[var(--success)]'
                               : indexStatus.regimeInfo.regime === 'Bearish'
-                              ? 'bg-rose-500'
+                              ? 'bg-[var(--danger)]'
                               : indexStatus.regimeInfo.regime === 'Neutral'
                               ? 'bg-neutral-500'
                               : 'bg-amber-500'
                           }`}
                         />
-                        {indexStatus.regimeInfo.regime}
+                        <span>{indexStatus.regimeInfo.regime} Regime</span>
                       </span>
                     </div>
 
@@ -253,8 +253,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               <span
                                 className={
                                   indexStatus.regimeInfo.distanceSMA50Pct >= 0
-                                    ? 'text-emerald-700 font-semibold'
-                                    : 'text-rose-700 font-semibold'
+                                    ? 'text-[var(--success)] font-semibold'
+                                    : 'text-[var(--danger)] font-semibold'
                                 }
                               >
                                 {indexStatus.regimeInfo.distanceSMA50Pct >= 0 ? '+' : ''}
@@ -280,8 +280,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               <span
                                 className={
                                   indexStatus.regimeInfo.distanceSMA200Pct >= 0
-                                    ? 'text-emerald-700 font-semibold'
-                                    : 'text-rose-700 font-semibold'
+                                    ? 'text-[var(--success)] font-semibold'
+                                    : 'text-[var(--danger)] font-semibold'
                                 }
                               >
                                 {indexStatus.regimeInfo.distanceSMA200Pct >= 0 ? '+' : ''}
@@ -455,8 +455,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <thead className="bg-neutral-100 text-neutral-600 text-[10px] uppercase border-b border-neutral-200">
                       <tr>
                         <th className="py-2 px-2.5">Sector</th>
-                        <th className="py-2 px-2 text-emerald-700 font-bold">Adv</th>
-                        <th className="py-2 px-2 text-rose-700 font-bold">Dec</th>
+                        <th className="py-2 px-2 text-[var(--success)] font-bold">Adv</th>
+                        <th className="py-2 px-2 text-[var(--danger)] font-bold">Dec</th>
                         <th className="py-2 px-2 text-neutral-500">Unch</th>
                         <th className="py-2 px-2.5 text-right">Total</th>
                       </tr>
@@ -465,8 +465,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {sectorStats.map((sec) => (
                         <tr key={sec.sector} className="hover:bg-neutral-50">
                           <td className="py-2 px-2.5 font-sans font-medium text-neutral-900">{sec.sector}</td>
-                          <td className="py-2 px-2 font-bold text-emerald-700">+{sec.advancers}</td>
-                          <td className="py-2 px-2 font-bold text-rose-700">-{sec.decliners}</td>
+                          <td className="py-2 px-2 font-bold text-[var(--success)]">+{sec.advancers}</td>
+                          <td className="py-2 px-2 font-bold text-[var(--danger)]">-{sec.decliners}</td>
                           <td className="py-2 px-2 text-neutral-500">{sec.unchanged}</td>
                           <td className="py-2 px-2.5 text-right font-bold text-neutral-800">{sec.total}</td>
                         </tr>
@@ -492,8 +492,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="mt-4 pt-3 border-t border-neutral-100 text-[11px] text-neutral-500 flex items-center justify-between">
             <span>Market Breadth:</span>
             {sectorStats.length > 0 && (
-              <span className="font-mono font-bold text-emerald-700">
-                {sectorStats.reduce((acc, s) => acc + s.advancers, 0)} Adv / {sectorStats.reduce((acc, s) => acc + s.decliners, 0)} Dec
+              <span className="font-mono font-bold">
+                <span className="text-[var(--success)]">
+                  {sectorStats.reduce((acc, s) => acc + s.advancers, 0)} Adv
+                </span>
+                <span className="text-neutral-400 mx-1">/</span>
+                <span className="text-[var(--danger)]">
+                  {sectorStats.reduce((acc, s) => acc + s.decliners, 0)} Dec
+                </span>
               </span>
             )}
           </div>

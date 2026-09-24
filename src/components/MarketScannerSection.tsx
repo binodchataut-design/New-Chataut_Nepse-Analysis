@@ -159,11 +159,11 @@ export const MarketScannerSection: React.FC<MarketScannerSectionProps> = ({
               <strong className="font-mono text-neutral-900">{scanResult.totalCompanies}</strong> companies
             </span>
             <span className="text-neutral-300">|</span>
-            <span className="text-emerald-700 font-medium">
+            <span className="text-[var(--success)] font-medium">
               <strong className="font-mono">{scanResult.scannedCount}</strong> scanned successfully
             </span>
             <span className="text-neutral-300">|</span>
-            <span className={scanResult.failedCount > 0 ? 'text-rose-700 font-medium' : 'text-neutral-600'}>
+            <span className={scanResult.failedCount > 0 ? 'text-[var(--danger)] font-medium' : 'text-neutral-600'}>
               <strong className="font-mono">{scanResult.failedCount}</strong> failed to load
             </span>
             <span className="text-neutral-300">|</span>
@@ -315,7 +315,7 @@ export const MarketScannerSection: React.FC<MarketScannerSectionProps> = ({
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] font-medium ${
                               match.sessionsAgo === 0
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                ? 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20'
                                 : match.sessionsAgo <= 2
                                 ? 'bg-neutral-100 text-neutral-800'
                                 : 'bg-neutral-50 text-neutral-600'
@@ -364,8 +364,8 @@ export const MarketScannerSection: React.FC<MarketScannerSectionProps> = ({
                             <span
                               className={
                                 match.avgForwardReturn >= 0
-                                  ? 'text-emerald-700'
-                                  : 'text-rose-700'
+                                  ? 'text-[var(--success)]'
+                                  : 'text-[var(--danger)]'
                               }
                             >
                               {match.avgForwardReturn >= 0 ? '+' : ''}

@@ -1,0 +1,50 @@
+name: Sync NEPSE Market Index
+
+on:
+  schedule:
+    # NEPSE trading days are Sunday through Thursday.
+    # Runs daily at 19:15 UTC (01:00 AM NPT next morning), 15 mins after daily_prices sync
+    # to maintain complete execution isolation.
+    - cron: '15 19 * * 0-4'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (fetch & parse without inserting to database)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: sync-market-index
+  cancel-in-progress: false
+
+jobs:
+  sync-index:
+    name: Sync NEPSE Index
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run Market Index Sync
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Running in dry-run mode..."
+            node scripts/sync-market-index.mjs --dry-run
+          else
+            node scripts/sync-market-index.mjs
+          fi

@@ -402,11 +402,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {metrics && (
               <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono bg-neutral-100">
                 {metrics.isPositive ? (
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  <TrendingUp className="w-3.5 h-3.5 text-[var(--success)]" />
                 ) : (
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
+                  <TrendingDown className="w-3.5 h-3.5 text-[var(--danger)]" />
                 )}
-                <span className={metrics.isPositive ? 'text-emerald-700' : 'text-rose-700'}>
+                <span className={metrics.isPositive ? 'text-[var(--success)]' : 'text-[var(--danger)]'}>
                   {metrics.sessionChange >= 0 ? '+' : ''}
                   {metrics.sessionChange.toFixed(2)} ({metrics.sessionChangePct >= 0 ? '+' : ''}
                   {metrics.sessionChangePct.toFixed(2)}%)
@@ -572,9 +572,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                       metrics.latestRSI >= 70
-                        ? 'bg-rose-100 text-rose-800'
+                        ? 'bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20'
                         : metrics.latestRSI <= filterConfig.rsiThreshold.threshold
-                        ? 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20'
                         : 'bg-neutral-100 text-neutral-700'
                     }`}
                   >
@@ -593,10 +593,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
               <div className="flex items-center gap-3 font-mono text-[10px] text-neutral-400">
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-0.5 bg-rose-500"></span> 70 OB
+                  <span className="w-2 h-0.5 bg-[var(--danger)]"></span> 70 OB
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-0.5 bg-emerald-500"></span> {filterConfig.rsiThreshold.threshold} {filterConfig.rsiThreshold.direction === 'recovery' ? 'OS' : 'Thresh'}
+                  <span className="w-2 h-0.5 bg-[var(--success)]"></span> {filterConfig.rsiThreshold.threshold} {filterConfig.rsiThreshold.direction === 'recovery' ? 'OS' : 'Thresh'}
                 </span>
               </div>
             </div>

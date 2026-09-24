@@ -285,7 +285,7 @@ export const PositionSizeCalculator: React.FC<PositionSizeCalculatorProps> = ({
               <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
                 Risk Per Share
               </div>
-              <div className="text-sm font-bold font-mono text-rose-700 mt-0.5">
+              <div className="text-sm font-bold font-mono text-[var(--danger)] mt-0.5">
                 NPR {sizingResult.riskPerShare.toFixed(2)}
               </div>
               <div className="text-[10px] text-neutral-500 font-mono">
@@ -451,7 +451,7 @@ export const PositionSizeCalculator: React.FC<PositionSizeCalculatorProps> = ({
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                       liquidityCheck.isHighVolumePct
                         ? 'bg-amber-200 text-amber-900'
-                        : 'bg-emerald-100 text-emerald-800'
+                        : 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20'
                     }`}
                   >
                     {liquidityCheck.positionAsPctOfDailyVolume.toFixed(1)}% of 20d Vol
@@ -483,8 +483,8 @@ export const PositionSizeCalculator: React.FC<PositionSizeCalculatorProps> = ({
               )}
 
               {liquidityCheck.hasSufficientHistory && !liquidityCheck.isHighVolumePct && (
-                <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-800 pt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--success)] pt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--success)]" />
                   <span>Feasible order size under normal market depth.</span>
                 </div>
               )}
